@@ -9,6 +9,8 @@ import {
   MarkAuditLog,
   AttendanceSession,
   AuditLog,
+  CancelledClassRecord,
+  StudentGrievance,
 } from "@/types";
 
 export const MOCK_BATCHES: Batch[] = [
@@ -37,8 +39,8 @@ export const MOCK_BATCHES: Batch[] = [
     totalStudents: 14,
   },
   {
-    id: "batch-2023-25",
-    name: "MSc SCB 2023–25",
+    id: "batch-2026-27",
+    name: "MSc SCB 2026–27",
     program: "MSc Systems & Computational Biology",
     department: "Department of Systems & Computational Biology",
     startYear: 2023,
@@ -718,7 +720,8 @@ export const MOCK_SESSIONS: AttendanceSession[] = [
     room: "LH-204",
     date: "2026-08-17",
     startTime: "10:00 AM",
-    endTime: "11:30 AM",
+    endTime: "12:00 PM",
+    hours: 2, // 2-Hour Class = 2 Attendance Marks
     sessionType: "QR",
     status: "ACTIVE",
     qrToken: "uohyd-scb501-live-token-84920",
@@ -802,7 +805,7 @@ export const MOCK_SESSIONS: AttendanceSession[] = [
         studentId: "std-08",
         studentRollNumber: "25MCMS08",
         studentName: "Kavita Nair",
-        status: "LATE",
+        status: "PRESENT",
         markedVia: "MANUAL",
         markedAt: "10:18 AM",
         remarks: "Arrived after 15m window; verified by instructor",
@@ -823,7 +826,7 @@ export const MOCK_AUDIT_LOGS: AuditLog[] = [
     targetStudentName: "Kavita Nair",
     targetStudentRoll: "25MCMS08",
     oldValue: "ABSENT",
-    newValue: "LATE",
+    newValue: "PRESENT",
     reason: "Student submitted medical pass from University Health Center.",
     timestamp: "2026-08-17T10:18:24Z",
   },
@@ -839,3 +842,113 @@ export const MOCK_AUDIT_LOGS: AuditLog[] = [
     timestamp: "2026-08-15T16:00:12Z",
   },
 ];
+
+export const MOCK_CANCELLED_CLASSES: CancelledClassRecord[] = [
+  {
+    id: "cancel-demo-01",
+    courseId: "course-scb-503",
+    courseCode: "SCB-503",
+    courseName: "Machine Learning in Bioinformatics",
+    slotId: "slot-fri-1400",
+    date: "2026-08-22",
+    day: "Friday",
+    time: "02:00 PM – 04:00 PM",
+    room: "Bio-Lab 3",
+    professorId: "prof-03",
+    professorName: "Dr. Ananya Mukherjee",
+    reason: "Faculty on Official Duty / DBT Bioinformatics Symposium",
+    additionalRemarks: "Compensatory lab session will be held next Tuesday at 4:00 PM.",
+    cancelledAt: "2026-08-19T09:30:00Z",
+  },
+];
+
+export const MOCK_GRIEVANCES: StudentGrievance[] = [
+  {
+    id: "grv-101",
+    ticketNumber: "UOH-GRV-2026-089",
+    studentId: "std-01",
+    studentName: "Ajay Kumar",
+    studentRollNo: "25MCMS01",
+    studentEmail: "ajay.k@uohyd.ac.in",
+    category: "ATTENDANCE_DISCREPANCY",
+    subject: "Attendance record correction for 2-hour lecture on Aug 14",
+    description:
+      "Respected Professor, on 14th August, I attended the 2-hour lecture block of Molecular Biology & Structural Bioinformatics in LH-204, but my QR scan timed out during projector refresh. I presented my medical and physical slip to the department office.",
+    courseId: "course-scb-501",
+    courseCode: "SCB-501",
+    courseName: "Molecular Biology & Structural Bioinformatics",
+    targetProfessorId: "prof-01",
+    targetProfessorName: "Prof. K. Venkatesh Rao",
+    status: "RESOLVED",
+    priority: "HIGH",
+    createdAt: "2026-08-14T11:20:00Z",
+    updatedAt: "2026-08-14T16:45:00Z",
+    resolutionNotes: "Attendance manually adjusted to PRESENT (2 attendance units) with valid medical endorsement.",
+    responses: [
+      {
+        id: "resp-01",
+        authorId: "prof-01",
+        authorName: "Prof. K. Venkatesh Rao",
+        authorRole: "professor",
+        message:
+          "Verified with the lecture hall sign-in sheet and physical slip. Your attendance record has been overridden to PRESENT with 2 attendance units.",
+        createdAt: "2026-08-14T16:45:00Z",
+      },
+    ],
+  },
+  {
+    id: "grv-102",
+    ticketNumber: "UOH-GRV-2026-092",
+    studentId: "std-01",
+    studentName: "Ajay Kumar",
+    studentRollNo: "25MCMS01",
+    studentEmail: "ajay.k@uohyd.ac.in",
+    category: "INTERNAL_MARKS",
+    subject: "Re-evaluation request for Assignment Component (SCB-502)",
+    description:
+      "Dear Dr. Mukherjee, my submission for the Python pipeline was marked 4.5/5 but the scoring rubric for bonus parallelization was not accounted for. Kindly recheck the GitHub repository link submitted.",
+    courseId: "course-scb-502",
+    courseCode: "SCB-502",
+    courseName: "Computational Genomics & Transcriptomics",
+    targetProfessorId: "prof-03",
+    targetProfessorName: "Dr. Ananya Mukherjee",
+    status: "UNDER_REVIEW",
+    priority: "NORMAL",
+    createdAt: "2026-08-18T10:15:00Z",
+    updatedAt: "2026-08-19T09:30:00Z",
+    responses: [
+      {
+        id: "resp-02",
+        authorId: "prof-03",
+        authorName: "Dr. Ananya Mukherjee",
+        authorRole: "professor",
+        message:
+          "Your code commit history is under review. I will update the score sheet after checking the multi-threading implementation.",
+        createdAt: "2026-08-19T09:30:00Z",
+      },
+    ],
+  },
+  {
+    id: "grv-103",
+    ticketNumber: "UOH-GRV-2026-095",
+    studentId: "std-02",
+    studentName: "Priya Singh",
+    studentRollNo: "25MCMS02",
+    studentEmail: "priya.s@uohyd.ac.in",
+    category: "TIMETABLE_CLASH",
+    subject: "Timetable clash between Lab Practical and Elective Seminar",
+    description:
+      "There is an overlap between Friday 2:00 PM SCB-503 Lab and the Interdisciplinary Bioinformatics Seminar. Requesting alternate slot allocation.",
+    courseId: "course-scb-503",
+    courseCode: "SCB-503",
+    courseName: "Machine Learning in Bioinformatics",
+    targetProfessorId: "prof-01",
+    targetProfessorName: "Prof. K. Venkatesh Rao",
+    status: "PENDING",
+    priority: "HIGH",
+    createdAt: "2026-08-20T08:00:00Z",
+    updatedAt: "2026-08-20T08:00:00Z",
+    responses: [],
+  },
+];
+

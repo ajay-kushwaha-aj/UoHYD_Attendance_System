@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef } from "react";
+import Image from "next/image";
 import { Printer, Download, ArrowLeft, CheckCircle2, ShieldCheck, GraduationCap } from "lucide-react";
 import {
   Course,
@@ -164,91 +165,124 @@ export function A4ReportPreview({
       {/* Printable A4 Container */}
       <div
         ref={printRef}
-        className="w-full max-w-[210mm] mx-auto bg-white p-8 sm:p-12 shadow-elevation-2 border border-slate-300 print:shadow-none print:border-none print:p-0 print:m-0 text-slate-900 font-sans"
+        className="a4-print-sheet w-full max-w-[210mm] mx-auto bg-white p-6 sm:p-10 shadow-elevation-2 border border-slate-300 print:shadow-none print:border-none print:p-0 print:m-0 print:max-w-none text-slate-900 font-sans"
         style={{ minHeight: "297mm" }}
       >
         {/* University Official Academic Header */}
-        <div className="text-center border-b-2 border-slate-900 pb-5 space-y-1">
-          <div className="flex items-center justify-center gap-2 text-xs font-extrabold uppercase tracking-widest text-slate-900">
-            <span>UNIVERSITY OF HYDERABAD</span>
-          </div>
-          <h1 className="text-base sm:text-lg font-bold text-slate-900 uppercase tracking-tight">
-            DEPARTMENT OF SYSTEMS & COMPUTATIONAL BIOLOGY
-          </h1>
-          <p className="text-xs font-semibold text-slate-700 tracking-wide">
-            School of Life Sciences • P.O. Central University, Hyderabad – 500046
-          </p>
-
-          <div className="pt-2">
-            <div className="inline-block border border-slate-800 bg-slate-100 px-4 py-1 rounded text-xs font-bold uppercase tracking-wider text-slate-900">
-              {getDocTitle()}
+        <div className="border-b-2 border-slate-900 pb-4 space-y-2">
+          <div className="flex items-center justify-between gap-4">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 relative shrink-0">
+              <Image
+                src="/uohyd-logo.png"
+                alt="University of Hyderabad Logo"
+                width={80}
+                height={80}
+                className="object-contain w-full h-full"
+                priority
+              />
             </div>
+            <div className="text-center flex-1 space-y-0.5">
+              <div className="text-xs sm:text-sm font-telugu font-bold text-[#8B1D1D] tracking-wide leading-tight">
+                హైదరాబాదు విశ్వవిద్యాలయం
+              </div>
+              <div className="text-xs sm:text-[13px] font-hindi font-bold text-[#8B1D1D] tracking-wide leading-tight">
+                हैदराबाद विश्वविद्यालय
+              </div>
+              <div className="text-sm sm:text-base font-sans font-black uppercase tracking-tight text-[#8B1D1D]">
+                UNIVERSITY OF HYDERABAD
+              </div>
+              <h1 className="text-xs sm:text-sm font-bold text-slate-900 uppercase tracking-tight pt-0.5">
+                DEPARTMENT OF SYSTEMS & COMPUTATIONAL BIOLOGY
+              </h1>
+              <p className="text-[10.5px] font-semibold text-slate-700 tracking-wide">
+                School of Life Sciences • P.O. Central University, Hyderabad – 500046, Telangana, India
+              </p>
+            </div>
+            <div className="w-16 sm:w-20 shrink-0 hidden sm:block" />
+          </div>
+
+          <div className="pt-2 text-center">
+            <span className="inline-block border-2 border-slate-900 bg-slate-100 px-5 py-1 rounded text-xs font-black uppercase tracking-wider text-slate-900 shadow-sm">
+              {getDocTitle()}
+            </span>
           </div>
         </div>
 
         {/* Course & Batch Metadata Grid */}
-        <div className="grid grid-cols-2 gap-x-6 gap-y-2 py-4 text-xs border-b border-slate-300">
+        <div className="grid grid-cols-2 gap-3 py-3 text-xs border-b border-slate-400 bg-slate-50/70 px-3 my-3 rounded">
           <div>
-            <span className="text-slate-500 font-medium">Course Code & Title:</span>
-            <p className="font-bold text-slate-900">
+            <span className="text-slate-600 font-semibold block text-[11px]">Course Code & Title:</span>
+            <p className="font-bold text-slate-950 text-xs">
               {course.code} — {course.name}
             </p>
           </div>
           <div>
-            <span className="text-slate-500 font-medium">Academic Session & Semester:</span>
-            <p className="font-bold text-slate-900">
-              {batch.name} • Semester {course.semester} ({section})
+            <span className="text-slate-600 font-semibold block text-[11px]">Academic Session & Semester:</span>
+            <p className="font-bold text-slate-950 text-xs">
+              {batch.name} • Semester {course.semester} (Section {section})
             </p>
           </div>
           <div>
-            <span className="text-slate-500 font-medium">Course Instructor:</span>
-            <p className="font-bold text-slate-900">{professorName}</p>
+            <span className="text-slate-600 font-semibold block text-[11px]">Course Instructor:</span>
+            <p className="font-bold text-slate-950 text-xs">{professorName}</p>
           </div>
           <div>
-            <span className="text-slate-500 font-medium">Credits & Date:</span>
-            <p className="font-bold text-slate-900">
+            <span className="text-slate-600 font-semibold block text-[11px]">Credits & Duration:</span>
+            <p className="font-bold text-slate-950 text-xs">
               {course.credits} Credits • {dateRange}
             </p>
           </div>
         </div>
 
         {/* Main Document Table */}
-        <div className="pt-4 overflow-x-auto">
+        <div className="pt-2">
           {reportType === "INTERNAL_MARKS" && (
-            <table className="w-full text-left border-collapse text-xs">
+            <table className="w-full text-left border-collapse border border-slate-400 text-xs">
               <thead>
-                <tr className="border-b-2 border-slate-900 bg-slate-100 text-[11px] font-bold uppercase tracking-wider text-slate-900">
-                  <th className="px-3 py-2 text-center w-10">S.No</th>
-                  <th className="px-3 py-2 w-24">Roll No</th>
-                  <th className="px-3 py-2">Student Name</th>
+                <tr className="border-b-2 border-slate-900 bg-slate-200/90 text-[10.5px] font-bold uppercase tracking-wider text-slate-900">
+                  <th className="border border-slate-400 px-2.5 py-2 text-center w-10">S.No</th>
+                  <th className="border border-slate-400 px-3 py-2 w-24">Roll No</th>
+                  <th className="border border-slate-400 px-3 py-2">Student Name</th>
                   {scheme.components.map((comp) => (
-                    <th key={comp.id} className="px-2 py-2 text-center">
+                    <th key={comp.id} className="border border-slate-400 px-2 py-2 text-center">
                       <div>{comp.shortCode || comp.name}</div>
-                      <div className="text-[9px] font-normal text-slate-600">({comp.maxMarks})</div>
+                      <div className="text-[9px] font-semibold text-slate-600">({comp.maxMarks})</div>
                     </th>
                   ))}
-                  <th className="px-3 py-2 text-center font-bold">Total ({scheme.totalMaxMarks})</th>
-                  <th className="px-3 py-2 text-center font-bold">%</th>
-                  <th className="px-3 py-2 text-right">Result</th>
+                  <th className="border border-slate-400 px-2.5 py-2 text-center font-black bg-slate-300/80 text-slate-950">
+                    Total ({scheme.totalMaxMarks})
+                  </th>
+                  <th className="border border-slate-400 px-2.5 py-2 text-center font-black bg-slate-300/80 text-slate-950">
+                    %
+                  </th>
+                  <th className="border border-slate-400 px-3 py-2 text-center font-bold">
+                    Result
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-300">
                 {marks.map((row, idx) => {
                   const isPass = row.totalScore >= (scheme.passingMarks || 12);
                   return (
-                    <tr key={row.id} className="h-9 break-inside-avoid">
-                      <td className="px-3 py-1.5 text-center font-mono text-slate-600">{idx + 1}</td>
-                      <td className="px-3 py-1.5 font-mono font-bold text-slate-900">{row.studentRollNumber}</td>
-                      <td className="px-3 py-1.5 font-medium text-slate-900">{row.studentName}</td>
+                    <tr key={row.id} className="h-8.5 break-inside-avoid hover:bg-slate-50">
+                      <td className="border border-slate-300 px-2.5 py-1.5 text-center font-mono text-slate-600 font-semibold">{idx + 1}</td>
+                      <td className="border border-slate-300 px-3 py-1.5 font-mono font-bold text-slate-950">{row.studentRollNumber}</td>
+                      <td className="border border-slate-300 px-3 py-1.5 font-semibold text-slate-950">{row.studentName}</td>
                       {scheme.components.map((comp) => (
-                        <td key={comp.id} className="px-2 py-1.5 text-center font-mono font-semibold">
+                        <td key={comp.id} className="border border-slate-300 px-2 py-1.5 text-center font-mono font-bold text-slate-800">
                           {row.componentScores[comp.id] ?? "—"}
                         </td>
                       ))}
-                      <td className="px-3 py-1.5 text-center font-mono font-bold text-slate-900">{row.totalScore}</td>
-                      <td className="px-3 py-1.5 text-center font-mono font-bold text-slate-900">{row.percentage}%</td>
-                      <td className="px-3 py-1.5 text-right font-bold text-[10px] uppercase">
-                        {isPass ? "PASS" : "FAIL"}
+                      <td className="border border-slate-400 px-2.5 py-1.5 text-center font-mono font-black text-slate-950 bg-slate-50">
+                        {row.totalScore}
+                      </td>
+                      <td className="border border-slate-400 px-2.5 py-1.5 text-center font-mono font-black text-slate-950 bg-slate-50">
+                        {row.percentage}%
+                      </td>
+                      <td className="border border-slate-300 px-3 py-1.5 text-center font-bold text-[10px] uppercase">
+                        <span className={isPass ? "text-emerald-800 font-extrabold" : "text-rose-800 font-extrabold"}>
+                          {isPass ? "PASS" : "FAIL"}
+                        </span>
                       </td>
                     </tr>
                   );
@@ -258,16 +292,20 @@ export function A4ReportPreview({
           )}
 
           {reportType === "ATTENDANCE" && (
-            <table className="w-full text-left border-collapse text-xs">
+            <table className="w-full text-left border-collapse border border-slate-400 text-xs">
               <thead>
-                <tr className="border-b-2 border-slate-900 bg-slate-100 text-[11px] font-bold uppercase tracking-wider text-slate-900">
-                  <th className="px-3 py-2 text-center w-10">S.No</th>
-                  <th className="px-3 py-2 w-24">Roll No</th>
-                  <th className="px-3 py-2">Student Name</th>
-                  <th className="px-3 py-2 text-center">Conducted</th>
-                  <th className="px-3 py-2 text-center">Attended</th>
-                  <th className="px-3 py-2 text-center font-bold">Attendance %</th>
-                  <th className="px-3 py-2 text-right">Statutory Status</th>
+                <tr className="border-b-2 border-slate-900 bg-slate-200/90 text-[10.5px] font-bold uppercase tracking-wider text-slate-900">
+                  <th className="border border-slate-400 px-2.5 py-2 text-center w-10">S.No</th>
+                  <th className="border border-slate-400 px-3 py-2 w-24">Roll No</th>
+                  <th className="border border-slate-400 px-3 py-2">Student Name</th>
+                  <th className="border border-slate-400 px-3 py-2 text-center font-bold">Conducted Units</th>
+                  <th className="border border-slate-400 px-3 py-2 text-center font-bold">Attended Units</th>
+                  <th className="border border-slate-400 px-3 py-2 text-center font-black bg-slate-300/80 text-slate-950">
+                    Attendance %
+                  </th>
+                  <th className="border border-slate-400 px-3 py-2 text-center font-bold">
+                    Statutory Compliance
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-300">
@@ -277,15 +315,17 @@ export function A4ReportPreview({
                   const isEligible = parseFloat(pct) >= 75.0;
 
                   return (
-                    <tr key={std.id} className="h-9 break-inside-avoid">
-                      <td className="px-3 py-1.5 text-center font-mono text-slate-600">{idx + 1}</td>
-                      <td className="px-3 py-1.5 font-mono font-bold text-slate-900">{std.rollNumber}</td>
-                      <td className="px-3 py-1.5 font-medium text-slate-900">{std.fullName}</td>
-                      <td className="px-3 py-1.5 text-center font-mono">26</td>
-                      <td className="px-3 py-1.5 text-center font-mono font-bold text-slate-900">{attended}</td>
-                      <td className="px-3 py-1.5 text-center font-mono font-bold text-slate-900">{pct}%</td>
-                      <td className="px-3 py-1.5 text-right font-bold text-[10px] uppercase">
-                        {isEligible ? "Eligible (≥75%)" : "Shortage (<75%)"}
+                    <tr key={std.id} className="h-8.5 break-inside-avoid hover:bg-slate-50">
+                      <td className="border border-slate-300 px-2.5 py-1.5 text-center font-mono text-slate-600 font-semibold">{idx + 1}</td>
+                      <td className="border border-slate-300 px-3 py-1.5 font-mono font-bold text-slate-950">{std.rollNumber}</td>
+                      <td className="border border-slate-300 px-3 py-1.5 font-semibold text-slate-950">{std.fullName}</td>
+                      <td className="border border-slate-300 px-3 py-1.5 text-center font-mono font-semibold">26</td>
+                      <td className="border border-slate-300 px-3 py-1.5 text-center font-mono font-bold text-slate-950">{attended}</td>
+                      <td className="border border-slate-400 px-3 py-1.5 text-center font-mono font-black text-slate-950 bg-slate-50">{pct}%</td>
+                      <td className="border border-slate-300 px-3 py-1.5 text-center font-bold text-[10px] uppercase">
+                        <span className={isEligible ? "text-emerald-800 font-extrabold" : "text-rose-800 font-extrabold"}>
+                          {isEligible ? "ELIGIBLE (≥ 75%)" : "SHORTAGE (< 75%)"}
+                        </span>
                       </td>
                     </tr>
                   );
@@ -295,16 +335,16 @@ export function A4ReportPreview({
           )}
 
           {reportType === "COMBINED_SUMMARY" && (
-            <table className="w-full text-left border-collapse text-xs">
+            <table className="w-full text-left border-collapse border border-slate-400 text-xs">
               <thead>
-                <tr className="border-b-2 border-slate-900 bg-slate-100 text-[11px] font-bold uppercase tracking-wider text-slate-900">
-                  <th className="px-3 py-2 text-center w-10">S.No</th>
-                  <th className="px-3 py-2 w-24">Roll No</th>
-                  <th className="px-3 py-2">Student Name</th>
-                  <th className="px-3 py-2 text-center">Attendance %</th>
-                  <th className="px-3 py-2 text-center">Internal Score</th>
-                  <th className="px-3 py-2 text-center font-bold">Max Marks</th>
-                  <th className="px-3 py-2 text-right">Academic Standing</th>
+                <tr className="border-b-2 border-slate-900 bg-slate-200/90 text-[10.5px] font-bold uppercase tracking-wider text-slate-900">
+                  <th className="border border-slate-400 px-2.5 py-2 text-center w-10">S.No</th>
+                  <th className="border border-slate-400 px-3 py-2 w-24">Roll No</th>
+                  <th className="border border-slate-400 px-3 py-2">Student Name</th>
+                  <th className="border border-slate-400 px-3 py-2 text-center font-bold">Attendance %</th>
+                  <th className="border border-slate-400 px-3 py-2 text-center font-bold">Internal Score</th>
+                  <th className="border border-slate-400 px-3 py-2 text-center font-bold">Max Marks</th>
+                  <th className="border border-slate-400 px-3 py-2 text-center font-bold">Statutory Standing</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-300">
@@ -316,15 +356,17 @@ export function A4ReportPreview({
                   const isGood = parseFloat(attPct) >= 75 && intScore >= 12;
 
                   return (
-                    <tr key={std.id} className="h-9 break-inside-avoid">
-                      <td className="px-3 py-1.5 text-center font-mono text-slate-600">{idx + 1}</td>
-                      <td className="px-3 py-1.5 font-mono font-bold text-slate-900">{std.rollNumber}</td>
-                      <td className="px-3 py-1.5 font-medium text-slate-900">{std.fullName}</td>
-                      <td className="px-3 py-1.5 text-center font-mono font-bold text-slate-900">{attPct}%</td>
-                      <td className="px-3 py-1.5 text-center font-mono font-bold text-slate-900">{intScore}</td>
-                      <td className="px-3 py-1.5 text-center font-mono">{scheme.totalMaxMarks}</td>
-                      <td className="px-3 py-1.5 text-right font-bold text-[10px] uppercase">
-                        {isGood ? "Satisfactory" : "At Risk"}
+                    <tr key={std.id} className="h-8.5 break-inside-avoid hover:bg-slate-50">
+                      <td className="border border-slate-300 px-2.5 py-1.5 text-center font-mono text-slate-600 font-semibold">{idx + 1}</td>
+                      <td className="border border-slate-300 px-3 py-1.5 font-mono font-bold text-slate-950">{std.rollNumber}</td>
+                      <td className="border border-slate-300 px-3 py-1.5 font-semibold text-slate-950">{std.fullName}</td>
+                      <td className="border border-slate-300 px-3 py-1.5 text-center font-mono font-bold text-slate-950">{attPct}%</td>
+                      <td className="border border-slate-300 px-3 py-1.5 text-center font-mono font-bold text-slate-950">{intScore}</td>
+                      <td className="border border-slate-300 px-3 py-1.5 text-center font-mono font-semibold">{scheme.totalMaxMarks}</td>
+                      <td className="border border-slate-300 px-3 py-1.5 text-center font-bold text-[10px] uppercase">
+                        <span className={isGood ? "text-emerald-800 font-extrabold" : "text-amber-800 font-extrabold"}>
+                          {isGood ? "SATISFACTORY" : "AT RISK / SHORTAGE"}
+                        </span>
                       </td>
                     </tr>
                   );
@@ -334,58 +376,78 @@ export function A4ReportPreview({
           )}
         </div>
 
-        {/* Statistical Footer Summary */}
-        <div className="mt-6 pt-3 border-t border-slate-300 flex items-center justify-between text-[11px] text-slate-600">
-          <span>
-            Total Enrolled Cohort: <strong>{students.length} Students</strong>
-          </span>
-          <span>
-            Generated: {new Date().toLocaleDateString()} at {new Date().toLocaleTimeString()}
-          </span>
+        {/* Statistical Performance Cohort Summary Box */}
+        <div className="mt-4 p-2.5 bg-slate-50 border border-slate-300 rounded text-xs grid grid-cols-2 sm:grid-cols-4 gap-2 text-center break-inside-avoid">
+          <div>
+            <span className="text-[10px] uppercase font-bold text-slate-500 block">Total Enrolled</span>
+            <span className="font-bold text-slate-900 font-mono text-xs">{students.length} Candidates</span>
+          </div>
+          <div>
+            <span className="text-[10px] uppercase font-bold text-slate-500 block">Total Appeared</span>
+            <span className="font-bold text-slate-900 font-mono text-xs">{marks.length} Students</span>
+          </div>
+          <div>
+            <span className="text-[10px] uppercase font-bold text-slate-500 block">Pass Percentage</span>
+            <span className="font-bold text-emerald-700 font-mono text-xs">
+              {marks.length > 0
+                ? `${((marks.filter((m) => m.totalScore >= (scheme.passingMarks || 12)).length / marks.length) * 100).toFixed(1)}%`
+                : "100.0%"}
+            </span>
+          </div>
+          <div>
+            <span className="text-[10px] uppercase font-bold text-slate-500 block">Class Average</span>
+            <span className="font-bold text-slate-900 font-mono text-xs">
+              {marks.length > 0
+                ? `${(marks.reduce((acc, m) => acc + m.totalScore, 0) / marks.length).toFixed(1)} / ${scheme.totalMaxMarks}`
+                : `24.5 / ${scheme.totalMaxMarks}`}
+            </span>
+          </div>
         </div>
 
         {/* Official Physical Signature Section (Bottom of Page) */}
-        <div className="mt-16 pt-8 border-t-2 border-slate-800 grid grid-cols-3 gap-6 text-center text-xs break-inside-avoid">
+        <div className="mt-12 pt-6 border-t-2 border-slate-900 grid grid-cols-3 gap-6 text-center text-xs break-inside-avoid">
           {/* Prepared By / Course Instructor */}
-          <div className="space-y-12">
-            <div className="h-12 flex items-end justify-center">
+          <div className="space-y-8">
+            <div className="h-10 flex items-end justify-center">
               <span className="text-[10px] text-slate-400 font-serif italic">
                 (Sign above)
               </span>
             </div>
-            <div className="border-t border-slate-900 pt-1.5">
-              <p className="font-bold text-slate-900">{professorName}</p>
-              <p className="text-[10px] text-slate-600">Course Instructor / Professor</p>
-              <p className="text-[10px] text-slate-600">Date: ____________________</p>
+            <div className="border-t border-slate-900 pt-1">
+              <p className="font-bold text-slate-950 text-xs">{professorName}</p>
+              <p className="text-[10px] text-slate-600 font-medium">Course Instructor / Professor</p>
+              <p className="text-[10px] text-slate-600 font-medium">Date: ____________________</p>
             </div>
           </div>
 
           {/* Department Seal Stamp Box */}
           <div className="flex flex-col items-center justify-center">
-            <div className="w-28 h-28 rounded-lg border-2 border-dashed border-slate-400 flex flex-col items-center justify-center p-2 text-[10px] text-slate-500 font-semibold uppercase text-center">
+            <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-lg border-2 border-dashed border-slate-400 flex flex-col items-center justify-center p-2 text-[10px] text-slate-500 font-bold uppercase text-center">
               <ShieldCheck className="w-5 h-5 text-slate-400 mb-1" />
               <span>Department Official Seal</span>
             </div>
           </div>
 
           {/* Verified By / Head of Department */}
-          <div className="space-y-12">
-            <div className="h-12 flex items-end justify-center">
+          <div className="space-y-8">
+            <div className="h-10 flex items-end justify-center">
               <span className="text-[10px] text-slate-400 font-serif italic">
                 (Sign above)
               </span>
             </div>
-            <div className="border-t border-slate-900 pt-1.5">
-              <p className="font-bold text-slate-900">Head of Department</p>
-              <p className="text-[10px] text-slate-600">Dept. of Systems & Comp. Biology</p>
-              <p className="text-[10px] text-slate-600">Date: ____________________</p>
+            <div className="border-t border-slate-900 pt-1">
+              <p className="font-bold text-slate-950 text-xs">Head of the Department</p>
+              <p className="text-[10px] text-slate-600 font-medium">Dept. of Systems & Comp. Biology</p>
+              <p className="text-[10px] text-slate-600 font-medium">Date: ____________________</p>
             </div>
           </div>
         </div>
 
         {/* Page Footer */}
-        <div className="mt-8 pt-3 border-t border-slate-300 text-center text-[10px] text-slate-500">
-          Department of Systems & Computational Biology • University of Hyderabad • Page 1 of 1
+        <div className="mt-6 pt-2 border-t border-slate-300 flex items-center justify-between text-[10px] text-slate-500">
+          <span>University of Hyderabad • School of Life Sciences</span>
+          <span>Official Examination Document • Confidential</span>
+          <span>Page 1 of 1</span>
         </div>
       </div>
     </div>

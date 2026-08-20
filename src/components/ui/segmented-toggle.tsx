@@ -25,12 +25,6 @@ export function AttendanceSegmentedToggle({
       activeClass: "bg-attendance-present-badge text-attendance-present-text shadow-sm border-attendance-present-border font-bold",
     },
     {
-      status: "LATE",
-      label: "Late",
-      keyLetter: "L",
-      activeClass: "bg-attendance-late-badge text-attendance-late-text shadow-sm border-attendance-late-border font-bold",
-    },
-    {
       status: "ABSENT",
       label: "Absent",
       keyLetter: "A",

@@ -10,6 +10,8 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
+  Calendar,
+  MapPin,
   Lock,
   Unlock,
   RefreshCw,
@@ -19,15 +21,18 @@ import {
   Filter,
   AlertCircle,
   FileCheck,
+  CalendarX,
+  RotateCcw,
 } from "lucide-react";
 import { useAttendance } from "@/lib/attendance-store";
-import { AttendanceStatus } from "@/types";
+import { AttendanceStatus, Course } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { AttendanceSegmentedToggle } from "@/components/ui/segmented-toggle";
 import { Modal } from "@/components/ui/modal";
+import { CancelClassModal } from "@/components/calendar/cancel-class-modal";
 import { cn } from "@/lib/utils";
 
 export default function ProfessorSessionPage({
@@ -38,11 +43,14 @@ export default function ProfessorSessionPage({
   const {
     activeSession,
     sessions,
+    courses,
     updateStudentRecord,
     markAllPresent,
     clearAttendance,
     lockSession,
     reopenSession,
+    cancelScheduledClass,
+    uncancelClass,
     regenerateQrToken,
     regenerateCode,
   } = useAttendance();
@@ -55,6 +63,7 @@ export default function ProfessorSessionPage({
   const [statusFilter, setStatusFilter] = useState<"ALL" | AttendanceStatus>("ALL");
   const [lockModalOpen, setLockModalOpen] = useState(false);
   const [reopenModalOpen, setReopenModalOpen] = useState(false);
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [auditReason, setAuditReason] = useState("");
   const [editReasonModal, setEditReasonModal] = useState<{
     isOpen: boolean;
@@ -77,9 +86,9 @@ export default function ProfessorSessionPage({
   const records = currentSession?.records || [];
 
   const presentCount = records.filter((r) => r.status === "PRESENT").length;
-  const lateCount = records.filter((r) => r.status === "LATE").length;
   const absentCount = records.filter((r) => r.status === "ABSENT").length;
   const totalCount = records.length;
+  const sessionHours = currentSession?.hours || 1;
 
   const filteredRecords = records.filter((rec) => {
     const matchesSearch =
@@ -119,7 +128,12 @@ export default function ProfessorSessionPage({
         editReasonModal.newStatus,
         overrideReason.trim()
       );
-      setEditReasonModal({ isOpen: false });
+      setEditReasonModal({
+        isOpen: false,
+        studentId: undefined,
+        studentName: undefined,
+        newStatus: undefined,
+      });
       setOverrideReason("");
     }
   };
@@ -137,6 +151,42 @@ export default function ProfessorSessionPage({
     setAuditReason("");
   };
 
+  const handleCancelSession = ({
+    reason,
+    additionalRemarks,
+  }: {
+    reason: string;
+    additionalRemarks?: string;
+  }) => {
+    cancelScheduledClass({
+      courseId: currentSession.courseId,
+      sessionId: currentSession.id,
+      reason,
+      additionalRemarks,
+      day: "Monday",
+      time: `${currentSession.startTime} – ${currentSession.endTime}`,
+      room: currentSession.room,
+    });
+    setCancelModalOpen(false);
+  };
+
+  const sessionCourse: Course = courses.find((c) => c.id === currentSession?.courseId) || {
+    id: currentSession?.courseId || "course-scb-501",
+    code: currentSession?.courseCode || "SCB-501",
+    name: currentSession?.courseName || "Molecular Biology & Structural Bioinformatics",
+    department: "Department of Systems & Computational Biology",
+    program: currentSession?.program || "MSc Systems & Computational Biology",
+    semester: currentSession?.semester || 2,
+    credits: 4,
+    professorId: currentSession?.professorId || "prof-01",
+    professorName: currentSession?.professorName || "Prof. K. Venkatesh Rao",
+    room: currentSession?.room || "LH-204",
+    scheduleTime: `${currentSession?.startTime} – ${currentSession?.endTime}`,
+    scheduleDays: ["Monday"],
+    totalStudents: currentSession?.records.length || 8,
+    totalConductedSessions: 24,
+  };
+
   if (!currentSession) {
     return (
       <div className="p-8 text-center">
@@ -152,60 +202,102 @@ export default function ProfessorSessionPage({
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
-      {/* Top Breadcrumb & Actions Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Link href="/professor/dashboard">
-            <button className="p-2 rounded-lg border border-border bg-surface hover:bg-surface-container text-on-surface-variant transition-colors">
-              <ArrowLeft className="w-4 h-4" />
-            </button>
-          </Link>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-mono font-bold text-primary-container bg-primary-fixed/40 px-2 py-0.5 rounded">
-                {currentSession.courseCode}
-              </span>
-              <span className="text-xs text-on-surface-variant font-medium">
-                {currentSession.program} • Sem {currentSession.semester}
-              </span>
-              {currentSession.status === "LOCKED" ? (
-                <Badge variant="secondary" className="gap-1 bg-surface-container text-on-surface-variant">
-                  <Lock className="w-3 h-3 text-secondary" /> Locked
-                </Badge>
-              ) : (
-                <Badge variant="present" withDot>
-                  Active Session
-                </Badge>
-              )}
-            </div>
-            <h1 className="text-xl md:text-2xl font-bold text-on-surface tracking-tight mt-0.5">
-              {currentSession.courseName}
-            </h1>
+      {/* Session Title & Action Bar */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-tertiary-teal">
+              Academic Attendance Session
+            </span>
+            <Badge
+              variant={
+                currentSession.status === "ACTIVE"
+                  ? "present"
+                  : currentSession.status === "LOCKED"
+                  ? "secondary"
+                  : "outline"
+              }
+              withDot
+            >
+              {currentSession.status}
+            </Badge>
+            <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-primary/10 text-primary border border-primary/20">
+              ⚡ {sessionHours} {sessionHours === 1 ? "Hour (1 Attendance)" : "Hours (2 Attendance)"}
+            </span>
+          </div>
+
+          <h1 className="text-xl md:text-2xl font-bold text-on-surface tracking-tight mt-1">
+            {currentSession.courseCode} — {currentSession.courseName}
+          </h1>
+
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-on-surface-variant mt-1">
+            <span className="flex items-center gap-1">
+              <Calendar className="w-3.5 h-3.5" />
+              {currentSession.date}
+            </span>
+            <span className="flex items-center gap-1">
+              <Clock className="w-3.5 h-3.5" />
+              {currentSession.startTime} – {currentSession.endTime}
+            </span>
+            <span className="flex items-center gap-1">
+              <MapPin className="w-3.5 h-3.5" />
+              {currentSession.room}
+            </span>
+            <span className="flex items-center gap-1">
+              <Users className="w-3.5 h-3.5" />
+              {currentSession.batchName} ({currentSession.section})
+            </span>
           </div>
         </div>
 
-        {/* Action Controls */}
-        <div className="flex items-center gap-2">
-          <Link
-            href={`/professor/session/${currentSession.id}/projector`}
-            target="_blank"
-          >
-            <Button variant="secondary" size="default" className="shadow-sm">
-              <Maximize2 className="w-4 h-4 text-tertiary-teal" />
-              <span className="hidden sm:inline">Projector View</span>
-            </Button>
-          </Link>
-
+        <div className="flex items-center gap-2 self-start md:self-auto">
           {currentSession.status === "ACTIVE" ? (
-            <Button
-              variant="primary"
-              size="default"
-              onClick={() => setLockModalOpen(true)}
-              className="shadow-sm bg-primary-container"
-            >
-              <Lock className="w-4 h-4" />
-              Save & Lock
-            </Button>
+            <>
+              <Button
+                variant="secondary"
+                size="default"
+                onClick={() => setCancelModalOpen(true)}
+                className="text-rose-700 hover:bg-rose-50 hover:text-rose-800 border-rose-200 gap-1.5"
+                title="Mark this lecture session as cancelled with official reason"
+              >
+                <CalendarX className="w-4 h-4 text-rose-600" />
+                Cancel Class
+              </Button>
+
+              <Link
+                href={`/professor/session/${currentSession.id}/projector`}
+                target="_blank"
+              >
+                <Button variant="secondary" size="default">
+                  <Maximize2 className="w-4 h-4 text-tertiary-teal" />
+                  Projector Display Mode
+                </Button>
+              </Link>
+
+              <Button
+                variant="primary"
+                size="default"
+                onClick={() => setLockModalOpen(true)}
+              >
+                <Lock className="w-4 h-4" />
+                Lock & Finalize Session
+              </Button>
+            </>
+          ) : currentSession.status === "CANCELLED" ? (
+            <div className="flex items-center gap-2">
+              <Badge variant="absent" withDot className="font-bold">
+                CLASS CANCELLED
+              </Badge>
+              <Button
+                variant="secondary"
+                size="default"
+                onClick={() => uncancelClass(`cancel-${currentSession.id}`)}
+                className="gap-1 text-xs font-semibold"
+              >
+                <RotateCcw className="w-4 h-4" />
+                Re-instate Session
+              </Button>
+            </div>
           ) : (
             <Button
               variant="outline"
@@ -218,6 +310,19 @@ export default function ProfessorSessionPage({
           )}
         </div>
       </div>
+
+      {/* Cancellation Banner if session is cancelled */}
+      {currentSession.status === "CANCELLED" && (
+        <div className="p-4 rounded-xl bg-rose-50 border border-rose-300 text-rose-950 text-xs space-y-1">
+          <div className="flex items-center gap-2 font-bold text-rose-900">
+            <CalendarX className="w-4 h-4 text-rose-700" />
+            <span>Class Cancelled by Instructor: {currentSession.cancelledBy || "Faculty"}</span>
+          </div>
+          <p className="font-medium">
+            <strong>Official Reason:</strong> {currentSession.cancelReason || "Official Faculty Notice"}
+          </p>
+        </div>
+      )}
 
       {/* Live Attendance Summary Banner */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-surface-lowest p-4 rounded-xl border border-border shadow-elevation-1">
@@ -234,6 +339,20 @@ export default function ProfessorSessionPage({
         </div>
 
         <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200">
+            <Clock className="w-5 h-5 text-indigo-600" />
+          </div>
+          <div>
+            <div className="text-[11px] font-bold uppercase tracking-wider text-indigo-700">
+              Class Hours & Marks
+            </div>
+            <div className="text-sm font-bold text-indigo-900">
+              {sessionHours} Hr ({sessionHours} {sessionHours === 1 ? "Mark" : "Marks"}/Student)
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
           <div className="p-2.5 rounded-lg bg-attendance-present-bg text-attendance-present-text">
             <CheckCircle2 className="w-5 h-5 text-attendance-present-dot" />
           </div>
@@ -244,18 +363,6 @@ export default function ProfessorSessionPage({
             <div className="text-lg font-bold text-attendance-present-text">
               {presentCount} ({Math.round((presentCount / (totalCount || 1)) * 100)}%)
             </div>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-lg bg-attendance-late-bg text-attendance-late-text">
-            <Clock className="w-5 h-5 text-attendance-late-dot" />
-          </div>
-          <div>
-            <div className="text-[11px] font-bold uppercase tracking-wider text-attendance-late-text">
-              Late
-            </div>
-            <div className="text-lg font-bold text-attendance-late-text">{lateCount}</div>
           </div>
         </div>
 
@@ -334,7 +441,7 @@ export default function ProfessorSessionPage({
                 <span className="text-[10px] font-semibold text-on-surface-variant px-2">
                   Filter:
                 </span>
-                {(["ALL", "PRESENT", "LATE", "ABSENT"] as const).map((st) => (
+                {(["ALL", "PRESENT", "ABSENT"] as const).map((st) => (
                   <button
                     key={st}
                     onClick={() => setStatusFilter(st)}
@@ -502,7 +609,7 @@ export default function ProfessorSessionPage({
 
               <div className="mt-4 space-y-2 max-h-72 overflow-y-auto">
                 {records
-                  .filter((r) => r.status === "PRESENT" || r.status === "LATE")
+                  .filter((r) => r.status === "PRESENT")
                   .map((rec) => (
                     <div
                       key={rec.id}
@@ -584,7 +691,7 @@ export default function ProfessorSessionPage({
             </div>
 
             <div className="p-4 rounded-xl bg-primary-fixed/30 text-xs text-primary-on-fixed-variant text-left leading-relaxed">
-              <strong>Tip for Instructors:</strong> Students can enter this code in their mobile portal under the <em>"Enter Code"</em> tab if their device camera is unavailable.
+              <strong>Tip for Instructors:</strong> Students can enter this code in their mobile portal under the <em>&ldquo;Enter Code&rdquo;</em> tab if their device camera is unavailable.
             </div>
           </Card>
         </div>
@@ -604,12 +711,12 @@ export default function ProfessorSessionPage({
               <span className="text-attendance-present-text font-bold">{presentCount}</span>
             </div>
             <div className="flex justify-between font-semibold text-on-surface">
-              <span>Late Students:</span>
-              <span className="text-attendance-late-text font-bold">{lateCount}</span>
-            </div>
-            <div className="flex justify-between font-semibold text-on-surface">
               <span>Absent Students:</span>
               <span className="text-attendance-absent-text font-bold">{absentCount}</span>
+            </div>
+            <div className="flex justify-between font-semibold text-on-surface border-t border-border pt-1">
+              <span>Class Hours & Units:</span>
+              <span className="text-indigo-900 font-bold">{sessionHours} {sessionHours === 1 ? "Hour (1 Attendance)" : "Hours (2 Attendance)"}</span>
             </div>
           </div>
 
@@ -724,6 +831,15 @@ export default function ProfessorSessionPage({
           </div>
         </div>
       </Modal>
+
+      {/* Cancel Class Modal */}
+      <CancelClassModal
+        isOpen={cancelModalOpen}
+        onClose={() => setCancelModalOpen(false)}
+        course={sessionCourse}
+        sessionId={currentSession.id}
+        onConfirm={handleCancelSession}
+      />
     </div>
   );
 }

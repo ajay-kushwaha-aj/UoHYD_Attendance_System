@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import {
   Users,
@@ -16,18 +16,72 @@ import {
   CheckCircle2,
   Award,
   FileSpreadsheet,
+  CalendarX,
+  RotateCcw,
+  MessageSquareText,
 } from "lucide-react";
 import { useAttendance } from "@/lib/attendance-store";
 import { StatCard } from "@/components/shared/stat-card";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { CancelClassModal } from "@/components/calendar/cancel-class-modal";
+import { cn } from "@/lib/utils";
 
 export default function ProfessorDashboard() {
-  const { currentProfessor, courses, sessions, activeSession, batches, selectedBatchId, selectedSection } = useAttendance();
+  const {
+    currentProfessor,
+    courses,
+    sessions,
+    activeSession,
+    batches,
+    selectedBatchId,
+    selectedSection,
+    cancelledClasses,
+    grievances,
+    cancelScheduledClass,
+    uncancelClass,
+  } = useAttendance();
+
+  const [cancelModalOpen, setCancelModalOpen] = useState<boolean>(false);
 
   const todayCourse = courses[0]; // SCB-501
   const activeBatch = batches.find((b) => b.id === selectedBatchId) || batches[0];
+
+  const assignedGrievances = grievances.filter(
+    (g) =>
+      g.targetProfessorId === currentProfessor.id ||
+      (g.courseCode && courses.some((c) => c.code === g.courseCode && c.professorName === currentProfessor.fullName))
+  );
+
+  const pendingGrievanceCount = assignedGrievances.filter(
+    (g) => g.status === "PENDING" || g.status === "UNDER_REVIEW"
+  ).length;
+
+  const todayCancelRecord = cancelledClasses.find(
+    (c) => c.courseId === todayCourse?.id && (c.sessionId === "sess-today-01" || c.day === "Monday")
+  );
+  const isTodayCancelled = Boolean(todayCancelRecord);
+
+  const handleConfirmCancel = ({
+    courseId,
+    reason,
+    additionalRemarks,
+  }: {
+    courseId: string;
+    reason: string;
+    additionalRemarks?: string;
+  }) => {
+    cancelScheduledClass({
+      courseId,
+      sessionId: "sess-today-01",
+      reason,
+      additionalRemarks,
+      day: "Monday",
+      time: todayCourse.scheduleTime,
+      room: todayCourse.room,
+    });
+  };
 
   return (
     <div className="space-y-8 animate-in fade-in duration-200">
@@ -134,24 +188,134 @@ export default function ProfessorDashboard() {
                 <span>{todayCourse.totalStudents} Students Enrolled</span>
               </div>
             </div>
+
+            {isTodayCancelled && todayCancelRecord && (
+              <div className="p-3 rounded-xl bg-rose-100/80 border border-rose-300 text-xs text-rose-950 space-y-1">
+                <div className="flex items-center gap-1.5 font-bold text-rose-900">
+                  <AlertTriangle className="w-4 h-4 text-rose-700" />
+                  <span>Class Cancelled: {todayCancelRecord.reason}</span>
+                </div>
+                {todayCancelRecord.additionalRemarks && (
+                  <p className="text-[11px] text-rose-800 italic">
+                    Notice: {todayCancelRecord.additionalRemarks}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-            <Link href="/professor/session/sess-today-01/projector" target="_blank">
-              <Button variant="secondary" size="lg" className="w-full sm:w-auto">
-                <QrCode className="w-4 h-4 text-tertiary-teal" />
-                Projector Mode
+            {isTodayCancelled && todayCancelRecord ? (
+              <Button
+                variant="secondary"
+                size="lg"
+                onClick={() => uncancelClass(todayCancelRecord.id)}
+                className="w-full sm:w-auto text-xs font-semibold gap-1.5 text-rose-900 hover:bg-rose-100 border-rose-300"
+              >
+                <RotateCcw className="w-4 h-4" />
+                Re-instate Scheduled Class
               </Button>
-            </Link>
-            <Link href="/professor/session/sess-today-01">
-              <Button variant="primary" size="lg" className="w-full sm:w-auto shadow-md font-bold">
-                <Play className="w-4 h-4 fill-white" />
-                Open Live Class Session
-              </Button>
-            </Link>
+            ) : (
+              <>
+                <Button
+                  variant="secondary"
+                  size="lg"
+                  onClick={() => setCancelModalOpen(true)}
+                  className="w-full sm:w-auto text-rose-700 hover:bg-rose-50 border-rose-200 gap-1.5"
+                  title="Mark today's class as cancelled with official reason"
+                >
+                  <CalendarX className="w-4 h-4" />
+                  Cancel Class
+                </Button>
+                <Link href="/professor/session/sess-today-01/projector" target="_blank">
+                  <Button variant="secondary" size="lg" className="w-full sm:w-auto">
+                    <QrCode className="w-4 h-4 text-tertiary-teal" />
+                    Projector Mode
+                  </Button>
+                </Link>
+                <Link href="/professor/session/sess-today-01">
+                  <Button variant="primary" size="lg" className="w-full sm:w-auto shadow-md font-bold">
+                    <Play className="w-4 h-4 fill-white" />
+                    Open Live Class Session
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </Card>
+
+      {/* Student Inquiries & Grievances Alert Box */}
+      {assignedGrievances.length > 0 && (
+        <Card className="p-5 bg-gradient-to-r from-primary-fixed/20 via-surface-lowest to-surface-lowest border border-primary/30 shadow-2xs space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-surface-container">
+            <div className="flex items-center gap-2.5">
+              <span className="p-2 rounded-xl bg-primary text-white shrink-0">
+                <MessageSquareText className="w-4 h-4" />
+              </span>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-on-surface">
+                    Student Academic Inquiries & Grievances
+                  </h3>
+                  {pendingGrievanceCount > 0 && (
+                    <span className="px-2 py-0.5 rounded-full text-[10.5px] font-bold bg-amber-100 text-amber-900 border border-amber-300 animate-pulse">
+                      {pendingGrievanceCount} Action Required
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-on-surface-variant">
+                  Students have tagged you in attendance discrepancy and mark re-evaluation requests.
+                </p>
+              </div>
+            </div>
+
+            <Link href="/professor/grievances">
+              <Button variant="primary" size="sm" className="font-bold gap-1 text-xs shadow-xs">
+                Open Grievance Inbox ({assignedGrievances.length}) <ArrowRight className="w-3.5 h-3.5" />
+              </Button>
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+            {assignedGrievances.slice(0, 2).map((grv) => (
+              <Link
+                key={grv.id}
+                href="/professor/grievances"
+                className="p-3 rounded-xl bg-surface-lowest hover:bg-surface-low border border-border transition-all flex flex-col justify-between space-y-2 group"
+              >
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-mono font-bold text-primary">{grv.ticketNumber}</span>
+                  <span
+                    className={cn(
+                      "px-2 py-0.5 rounded text-[10px] font-bold",
+                      grv.status === "RESOLVED"
+                        ? "bg-emerald-100 text-emerald-800"
+                        : grv.status === "UNDER_REVIEW"
+                        ? "bg-amber-100 text-amber-900"
+                        : "bg-blue-100 text-blue-900"
+                    )}
+                  >
+                    {grv.status.replace("_", " ")}
+                  </span>
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-on-surface group-hover:text-primary transition-colors line-clamp-1">
+                    {grv.subject}
+                  </h4>
+                  <p className="text-[11px] text-on-surface-variant line-clamp-1 mt-0.5">
+                    From: {grv.studentName} ({grv.studentRollNo}) • {grv.courseCode || "General Inquiry"}
+                  </p>
+                </div>
+                <div className="text-[10.5px] text-tertiary-teal font-semibold pt-1 border-t border-surface-container/60 flex items-center justify-between">
+                  <span>Click to review & respond</span>
+                  <span>→</span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {/* Internal Assessment Summary Card */}
       <Card className="p-6 bg-surface-lowest border border-border">
@@ -294,6 +458,15 @@ export default function ProfessorDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Cancel Class Modal */}
+      <CancelClassModal
+        isOpen={cancelModalOpen}
+        onClose={() => setCancelModalOpen(false)}
+        course={todayCourse}
+        sessionId="sess-today-01"
+        onConfirm={handleConfirmCancel}
+      />
     </div>
   );
 }

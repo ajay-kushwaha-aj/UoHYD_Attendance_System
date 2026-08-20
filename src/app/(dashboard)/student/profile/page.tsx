@@ -20,6 +20,7 @@ import {
   Smartphone,
   Calendar,
 } from "lucide-react";
+import Image from "next/image";
 import { useAttendance } from "@/lib/attendance-store";
 import { useAuth } from "@/lib/auth-context";
 import { Card } from "@/components/ui/card";
@@ -27,12 +28,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField, FormSection } from "@/components/ui/form-field";
+import { cn } from "@/lib/utils";
 
 type ProfileTab = "academic" | "contact" | "security" | "smartcard";
 
 export default function StudentProfilePage() {
-  const { currentStudent } = useAttendance();
+  const { currentStudent, getStudentAttendanceStats } = useAttendance();
   const { user } = useAuth();
+  const stats = getStudentAttendanceStats(currentStudent.id);
 
   const [activeTab, setActiveTab] = useState<ProfileTab>("academic");
 
@@ -227,14 +230,23 @@ export default function StudentProfilePage() {
                 <span className="text-[10px] uppercase font-bold text-on-surface-variant">
                   Statutory Attendance Compliance
                 </span>
-                <p className="font-semibold text-on-surface">91.3% Overall Attendance</p>
-                <span className="text-[11px] text-emerald-700 font-semibold">Eligible for End-Sem Examinations</span>
+                <p className="font-semibold text-on-surface">
+                  {stats.overallPercentage.toFixed(1)}% Overall ({stats.totalAttended}/{stats.totalConducted} Units)
+                </p>
+                <div className="text-[11px] text-on-surface-variant flex items-center gap-2">
+                  <span>Theory: <strong className="text-primary">{stats.theoryPercentage.toFixed(1)}%</strong></span>
+                  <span>•</span>
+                  <span>Lab: <strong className="text-tertiary-teal">{stats.labPercentage.toFixed(1)}%</strong></span>
+                </div>
+                <span className="text-[11px] text-emerald-700 font-semibold block mt-0.5">
+                  Eligible for End-Sem Examinations (≥ 75% Met)
+                </span>
               </div>
             </div>
 
             <div className="p-4 rounded-xl bg-primary-fixed/30 text-xs text-primary-on-fixed-variant flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 shrink-0 text-primary" />
-              <span>Institutional Single-Sign-On Identity verified through Dean's Academic Office.</span>
+              <span>Institutional Single-Sign-On Identity verified through Dean&apos;s Academic Office.</span>
             </div>
           </Card>
         </div>
@@ -348,15 +360,27 @@ export default function StudentProfilePage() {
 
               {/* Card Header */}
               <div className="flex items-center justify-between border-b border-white/20 pb-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-white text-primary flex items-center justify-center font-bold text-sm">
-                    <GraduationCap className="w-5 h-5 text-primary" />
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 flex items-center justify-center shrink-0">
+                    <Image
+                      src="/uohyd-logo.png"
+                      alt="University of Hyderabad Logo"
+                      width={48}
+                      height={48}
+                      className="object-contain w-full h-full drop-shadow-xs"
+                    />
                   </div>
                   <div>
-                    <h3 className="text-xs font-extrabold tracking-widest uppercase">
+                    <p className="text-[10px] font-telugu font-bold text-amber-200 leading-tight">
+                      హైదరాబాదు విశ్వవిద్యాలయం
+                    </p>
+                    <p className="text-[10.5px] font-hindi font-bold text-amber-200 leading-tight">
+                      हैदराबाद विश्वविद्यालय
+                    </p>
+                    <h3 className="text-xs font-sans font-black tracking-wider uppercase leading-tight mt-0.5">
                       UNIVERSITY OF HYDERABAD
                     </h3>
-                    <p className="text-[9px] text-white/80 uppercase">
+                    <p className="text-[8.5px] text-white/80 uppercase">
                       School of Life Sciences
                     </p>
                   </div>

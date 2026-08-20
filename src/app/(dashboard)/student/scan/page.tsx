@@ -27,6 +27,7 @@ export default function StudentScanPage() {
     success: boolean;
     message: string;
     courseName?: string;
+    errorType?: "GEOLOCATION_OUT_OF_BOUNDS" | "CAMERA_PERMISSION_DENIED" | "QR_EXPIRED";
   } | null>(null);
   const [isScanning, setIsScanning] = useState(false);
 
@@ -38,6 +39,37 @@ export default function StudentScanPage() {
       const res = submitStudentAttendance(currentStudent.id, token);
       setResult(res);
     }, 1200);
+  };
+
+  const handleSimulateError = (
+    type: "GEOLOCATION_OUT_OF_BOUNDS" | "CAMERA_PERMISSION_DENIED" | "QR_EXPIRED"
+  ) => {
+    setIsScanning(true);
+    setTimeout(() => {
+      setIsScanning(false);
+      if (type === "GEOLOCATION_OUT_OF_BOUNDS") {
+        setResult({
+          success: false,
+          errorType: "GEOLOCATION_OUT_OF_BOUNDS",
+          message:
+            "GPS Coordinate Mismatch: Device detected outside School of Life Sciences geofence boundary (Coordinates: 17.4601° N, 78.3312° E). Attendance denied.",
+        });
+      } else if (type === "CAMERA_PERMISSION_DENIED") {
+        setResult({
+          success: false,
+          errorType: "CAMERA_PERMISSION_DENIED",
+          message:
+            "Camera Sensor Access Blocked: Your browser blocked webcam permissions required for live dynamic QR verification.",
+        });
+      } else {
+        setResult({
+          success: false,
+          errorType: "QR_EXPIRED",
+          message:
+            "Dynamic Cryptographic Token Expired: The 15-second rotating classroom token refreshed before confirmation.",
+        });
+      }
+    }, 800);
   };
 
   const handleCodeSubmit = (e: React.FormEvent) => {
@@ -190,20 +222,52 @@ export default function StudentScanPage() {
               Camera Viewfinder Active
             </h3>
             <p className="text-xs text-on-surface-variant">
-              In test mode, click below to simulate an instant high-resolution scan of the lecturer's active QR code.
+              In test mode, click below to simulate an instant high-resolution scan of the lecturer&apos;s active QR code.
             </p>
           </div>
 
-          <Button
-            variant="teal"
-            size="lg"
-            className="w-full shadow-md"
-            onClick={handleSimulateQrScan}
-            isLoading={isScanning}
-          >
-            <Sparkles className="w-4 h-4" />
-            Simulate Instant QR Check-in
-          </Button>
+          <div className="w-full space-y-2 pt-2">
+            <Button
+              variant="teal"
+              size="lg"
+              className="w-full shadow-md font-bold"
+              onClick={handleSimulateQrScan}
+              isLoading={isScanning}
+            >
+              <Sparkles className="w-4 h-4" />
+              Simulate Successful QR Check-In
+            </Button>
+
+            {/* Interactive Error Testing Triggers */}
+            <div className="pt-3 border-t border-border space-y-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant block text-center">
+                Simulate Hardware / Security Exceptions:
+              </span>
+              <div className="grid grid-cols-3 gap-1.5 text-[11px]">
+                <button
+                  type="button"
+                  onClick={() => handleSimulateError("GEOLOCATION_OUT_OF_BOUNDS")}
+                  className="p-1.5 rounded-lg border border-rose-200 bg-rose-50/70 hover:bg-rose-100 text-rose-800 font-semibold transition-colors truncate"
+                >
+                  📍 GPS Mismatch
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSimulateError("CAMERA_PERMISSION_DENIED")}
+                  className="p-1.5 rounded-lg border border-amber-200 bg-amber-50/70 hover:bg-amber-100 text-amber-800 font-semibold transition-colors truncate"
+                >
+                  📷 Camera Denied
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSimulateError("QR_EXPIRED")}
+                  className="p-1.5 rounded-lg border border-indigo-200 bg-indigo-50/70 hover:bg-indigo-100 text-indigo-800 font-semibold transition-colors truncate"
+                >
+                  ⏱️ QR Expired
+                </button>
+              </div>
+            </div>
+          </div>
         </Card>
       )}
 

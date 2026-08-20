@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Bell,
   Search,
@@ -13,23 +14,51 @@ import {
   Check,
   LogOut,
   Sparkles,
+  AlertTriangle,
+  BookOpen,
+  Calendar,
+  CheckCircle2,
+  X,
+  Trash2,
+  ExternalLink,
+  RefreshCw,
 } from "lucide-react";
 import { useAttendance } from "@/lib/attendance-store";
 import { useAuth, AuthUser } from "@/lib/auth-context";
-import { UserRole } from "@/types";
+import { UserRole, AppNotification } from "@/types";
 import { cn } from "@/lib/utils";
+import { UniversityLoader } from "@/components/shared/university-loader";
 
 interface HeaderProps {
   onOpenSearch?: () => void;
 }
 
 export function Header({ onOpenSearch }: HeaderProps) {
-  const { activeSession, setCurrentRole } = useAttendance();
+  const router = useRouter();
+  const {
+    activeSession,
+    setCurrentRole,
+    notifications,
+    unreadNotificationCount,
+    markNotificationAsRead,
+    markAllNotificationsAsRead,
+    clearNotification,
+    clearAllNotifications,
+  } = useAttendance();
   const { user, role, switchRole, logout } = useAuth();
 
   const [roleMenuOpen, setRoleMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
+  const [notifFilter, setNotifFilter] = useState<"all" | "unread" | "cancellations">("all");
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefreshPortal = () => {
+    setIsRefreshing(true);
+    setTimeout(() => {
+      setIsRefreshing(false);
+    }, 700);
+  };
 
   const currentRole = role || "professor";
   const currentUser: AuthUser = user || {
@@ -69,26 +98,47 @@ export function Header({ onOpenSearch }: HeaderProps) {
     setUserMenuOpen(false);
   };
 
+  // Filtered notifications based on active role and tab
+  const roleScopedNotifications = notifications.filter(
+    (n) => n.targetRole === "all" || n.targetRole === currentRole
+  );
+
+  const filteredNotifications = roleScopedNotifications.filter((n) => {
+    if (notifFilter === "unread") return !n.read;
+    if (notifFilter === "cancellations") return n.type === "CANCELLATION";
+    return true;
+  });
+
+  const handleNotificationClick = (notif: AppNotification) => {
+    markNotificationAsRead(notif.id);
+    if (notif.link) {
+      router.push(notif.link);
+      setNotificationOpen(false);
+    }
+  };
+
   return (
-    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-border bg-surface-lowest/90 px-4 md:px-8 backdrop-blur-md">
-      {/* Left: Quick Search Button / Active Class Badge */}
+    <header className="sticky top-0 z-30 flex h-20 w-full items-center justify-between border-b border-surface-container bg-surface-lowest/95 px-4 md:px-8 backdrop-blur-md">
+      {/* Left: Quick Search Button & Active Session Indicator */}
       <div className="flex items-center gap-4">
         <button
           onClick={onOpenSearch}
-          className="flex items-center gap-2 rounded-lg border border-outline-variant bg-surface px-3 py-1.5 text-xs text-on-surface-variant hover:border-outline hover:text-on-surface transition-colors"
+          className="flex items-center gap-2.5 rounded-xl border border-border bg-surface-low/70 px-3.5 py-2 text-xs text-on-surface-variant hover:border-outline hover:text-on-surface hover:bg-surface-low transition-all shadow-2xs group"
         >
-          <Search className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">Search courses, students, codes...</span>
-          <span className="sm:hidden">Search...</span>
-          <kbd className="hidden sm:inline-flex items-center rounded border border-outline-variant bg-surface-container px-1.5 py-0.5 text-[10px] font-semibold text-on-surface-variant ml-2">
+          <Search className="w-4 h-4 text-tertiary-teal group-hover:scale-110 transition-transform" />
+          <span className="hidden sm:inline font-medium text-on-surface">Search courses, students, faculty, codes...</span>
+          <span className="sm:hidden font-medium text-on-surface">Search...</span>
+          <kbd className="hidden sm:inline-flex items-center rounded-md border border-border bg-surface-lowest px-1.5 py-0.5 text-[10px] font-mono font-bold text-on-surface-variant ml-2 shadow-2xs">
             ⌘K
           </kbd>
         </button>
 
         {activeSession && activeSession.status === "ACTIVE" && (
-          <div className="hidden lg:flex items-center gap-2 rounded-full bg-tertiary-fixed px-3 py-1 text-xs font-semibold text-tertiary-on-fixed">
+          <div className="hidden lg:flex items-center gap-2.5 rounded-full bg-tertiary-fixed/80 border border-tertiary-teal/30 px-3.5 py-1.5 text-xs font-semibold text-tertiary-on-fixed shadow-2xs animate-in fade-in">
             <span className="h-2 w-2 rounded-full bg-tertiary-teal animate-pulse" />
-            <span>Class Active: {activeSession.courseCode} ({activeSession.room})</span>
+            <span>
+              Live Class: <strong className="font-mono text-tertiary">{activeSession.courseCode}</strong> ({activeSession.room})
+            </span>
           </div>
         )}
       </div>
@@ -99,13 +149,13 @@ export function Header({ onOpenSearch }: HeaderProps) {
         <div className="relative">
           <button
             onClick={() => setRoleMenuOpen(!roleMenuOpen)}
-            className="flex items-center gap-2 rounded-full border border-primary-container/20 bg-primary-fixed/40 px-3 py-1.5 text-xs font-semibold text-primary-container hover:bg-primary-fixed transition-colors"
+            className="flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 hover:bg-primary/10 px-3.5 py-2 text-xs font-bold text-primary transition-all shadow-2xs"
           >
-            {currentRole === "student" && <GraduationCap className="w-3.5 h-3.5 text-primary-container" />}
-            {currentRole === "professor" && <Briefcase className="w-3.5 h-3.5 text-primary-container" />}
-            {currentRole === "admin" && <ShieldCheck className="w-3.5 h-3.5 text-primary-container" />}
-            <span className="capitalize font-bold">{currentRole} Mode</span>
-            <ChevronDown className="w-3 h-3 opacity-70" />
+            {currentRole === "student" && <GraduationCap className="w-4 h-4 text-primary" />}
+            {currentRole === "professor" && <Briefcase className="w-4 h-4 text-primary" />}
+            {currentRole === "admin" && <ShieldCheck className="w-4 h-4 text-primary" />}
+            <span className="capitalize">{currentRole} Mode</span>
+            <ChevronDown className="w-3.5 h-3.5 opacity-60 ml-0.5" />
           </button>
 
           {roleMenuOpen && (
@@ -151,14 +201,19 @@ export function Header({ onOpenSearch }: HeaderProps) {
           )}
         </div>
 
-        {/* Notifications Icon */}
+        {/* Notifications Icon & Popover */}
         <div className="relative">
           <button
             onClick={() => setNotificationOpen(!notificationOpen)}
             className="relative rounded-full p-2 text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors"
+            title="Notifications"
           >
-            <Bell className="w-4 h-4" />
-            <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-attendance-absent-dot" />
+            <Bell className="w-5 h-5" />
+            {unreadNotificationCount > 0 && (
+              <span className="absolute top-1 right-1 min-w-4 h-4 px-1 rounded-full bg-attendance-absent-dot text-[9px] font-black text-white flex items-center justify-center animate-pulse">
+                {unreadNotificationCount > 9 ? "9+" : unreadNotificationCount}
+              </span>
+            )}
           </button>
 
           {notificationOpen && (
@@ -167,28 +222,149 @@ export function Header({ onOpenSearch }: HeaderProps) {
                 className="fixed inset-0 z-40"
                 onClick={() => setNotificationOpen(false)}
               />
-              <div className="absolute right-0 mt-2 w-80 rounded-xl border border-border bg-surface-lowest p-3 shadow-elevation-2 z-50 animate-in fade-in zoom-in-95">
-                <div className="flex items-center justify-between border-b border-surface-container pb-2 mb-2">
-                  <span className="text-xs font-bold text-on-surface">Notifications</span>
-                  <span className="text-[10px] text-tertiary-teal font-semibold cursor-pointer">
-                    Mark all read
-                  </span>
+              <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-2xl border border-border bg-surface-lowest shadow-elevation-2 z-50 animate-in fade-in zoom-in-95 overflow-hidden">
+                {/* Header */}
+                <div className="p-3.5 border-b border-surface-container bg-surface-low/60 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-on-surface">Institutional Notifications</span>
+                      {unreadNotificationCount > 0 && (
+                        <span className="px-1.5 py-0.5 rounded bg-primary-fixed/50 text-primary font-mono text-[10px] font-bold">
+                          {unreadNotificationCount} new
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 text-[11px]">
+                      {unreadNotificationCount > 0 && (
+                        <button
+                          onClick={markAllNotificationsAsRead}
+                          className="font-semibold text-tertiary-teal hover:underline"
+                        >
+                          Mark all read
+                        </button>
+                      )}
+                      {roleScopedNotifications.length > 0 && (
+                        <button
+                          onClick={clearAllNotifications}
+                          className="text-on-surface-variant/70 hover:text-rose-600 transition-colors"
+                          title="Clear all"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Filter Pills */}
+                  <div className="flex items-center gap-1">
+                    {(
+                      [
+                        { key: "all", label: `All (${roleScopedNotifications.length})` },
+                        { key: "unread", label: `Unread (${unreadNotificationCount})` },
+                        {
+                          key: "cancellations",
+                          label: `Cancellations (${
+                            roleScopedNotifications.filter((n) => n.type === "CANCELLATION").length
+                          })`,
+                        },
+                      ] as const
+                    ).map((tab) => (
+                      <button
+                        key={tab.key}
+                        onClick={() => setNotifFilter(tab.key)}
+                        className={`px-2.5 py-0.5 rounded-full text-[10.5px] font-semibold transition-colors ${
+                          notifFilter === tab.key
+                            ? "bg-primary text-white font-bold"
+                            : "bg-surface-container/60 text-on-surface-variant hover:bg-surface-container hover:text-on-surface"
+                        }`}
+                      >
+                        {tab.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <div className="p-2 rounded-lg bg-surface-low text-xs">
-                    <p className="font-semibold text-on-surface">Attendance Recorded</p>
-                    <p className="text-[11px] text-on-surface-variant mt-0.5">
-                      Your attendance for Molecular Biology was marked PRESENT at 10:02 AM.
-                    </p>
-                    <span className="text-[10px] text-outline mt-1 block">15m ago</span>
-                  </div>
-                  <div className="p-2 rounded-lg bg-surface-low text-xs">
-                    <p className="font-semibold text-on-surface">Upcoming Lecture</p>
-                    <p className="text-[11px] text-on-surface-variant mt-0.5">
-                      Computational Genomics starts at 11:30 AM in Bioinformatics Lab-1.
-                    </p>
-                    <span className="text-[10px] text-outline mt-1 block">1h ago</span>
-                  </div>
+
+                {/* Notifications List */}
+                <div className="max-h-80 overflow-y-auto p-2 space-y-1.5">
+                  {filteredNotifications.length === 0 ? (
+                    <div className="p-8 text-center text-xs text-on-surface-variant space-y-1">
+                      <CheckCircle2 className="w-6 h-6 text-emerald-600 mx-auto opacity-60 mb-2" />
+                      <p className="font-semibold text-on-surface">You&apos;re all caught up!</p>
+                      <p className="text-[11px] text-on-surface-variant">No notifications match this filter.</p>
+                    </div>
+                  ) : (
+                    filteredNotifications.map((notif) => (
+                      <div
+                        key={notif.id}
+                        onClick={() => handleNotificationClick(notif)}
+                        className={cn(
+                          "group relative p-2.5 rounded-xl text-xs transition-all cursor-pointer border flex items-start gap-2.5",
+                          notif.read
+                            ? "bg-surface-lowest hover:bg-surface-low border-surface-container/60"
+                            : "bg-primary-fixed/20 hover:bg-primary-fixed/30 border-primary/20 shadow-2xs"
+                        )}
+                      >
+                        {/* Icon based on notification type */}
+                        <div className="mt-0.5 shrink-0">
+                          {notif.type === "CANCELLATION" ? (
+                            <div className="p-1.5 rounded-lg bg-rose-100 text-rose-800">
+                              <AlertTriangle className="w-3.5 h-3.5" />
+                            </div>
+                          ) : notif.type === "ACADEMIC" ? (
+                            <div className="p-1.5 rounded-lg bg-purple-100 text-purple-800">
+                              <BookOpen className="w-3.5 h-3.5" />
+                            </div>
+                          ) : notif.type === "SUCCESS" ? (
+                            <div className="p-1.5 rounded-lg bg-emerald-100 text-emerald-800">
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                            </div>
+                          ) : (
+                            <div className="p-1.5 rounded-lg bg-teal-100 text-teal-800">
+                              <Bell className="w-3.5 h-3.5" />
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Text */}
+                        <div className="flex-1 min-w-0 pr-4">
+                          <div className="flex items-center justify-between">
+                            <p className="font-bold text-on-surface line-clamp-1">{notif.title}</p>
+                            {!notif.read && (
+                              <span className="w-2 h-2 rounded-full bg-primary shrink-0 ml-1.5" />
+                            )}
+                          </div>
+                          <p className="text-[11px] text-on-surface-variant mt-0.5 line-clamp-2 leading-relaxed">
+                            {notif.message}
+                          </p>
+                          <div className="flex items-center justify-between mt-1 text-[10px] text-outline">
+                            <span>{notif.timestamp}</span>
+                            {notif.link && (
+                              <span className="text-tertiary-teal font-semibold flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                View <ExternalLink className="w-2.5 h-2.5" />
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Dismiss / Delete button */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            clearNotification(notif.id);
+                          }}
+                          className="absolute top-2 right-2 p-1 rounded-md text-on-surface-variant/40 hover:text-on-surface hover:bg-surface-container opacity-0 group-hover:opacity-100 transition-opacity"
+                          title="Dismiss"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {/* Footer */}
+                <div className="p-2 border-t border-surface-container bg-surface-low/50 text-center text-[10px] text-on-surface-variant font-medium">
+                  University of Hyderabad Real-Time Academic Dispatch
                 </div>
               </div>
             </>
@@ -262,6 +438,24 @@ export function Header({ onOpenSearch }: HeaderProps) {
             </>
           )}
         </div>
+
+        {/* Quick Sync / Refresh Button */}
+        <button
+          onClick={handleRefreshPortal}
+          title="Synchronize and Refresh Portal Data"
+          className="flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-surface-low/70 text-on-surface-variant hover:border-outline hover:text-on-surface hover:bg-surface-low transition-all shadow-2xs group"
+        >
+          <RefreshCw className={cn("w-4 h-4 text-on-surface-variant group-hover:text-primary transition-transform", isRefreshing && "animate-spin text-primary")} />
+        </button>
+
+        {/* Global Loading Overlay when Refreshing */}
+        {isRefreshing && (
+          <UniversityLoader
+            fullScreen
+            message="Synchronizing Academic Records..."
+            subMessage="Refreshing University of Hyderabad live attendance nodes & timetables"
+          />
+        )}
       </div>
     </header>
   );

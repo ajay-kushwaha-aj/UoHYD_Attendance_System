@@ -20,7 +20,10 @@ import {
   Sliders,
   CheckCircle2,
   Award,
+  Activity,
+  MessageSquareText,
 } from "lucide-react";
+import Image from "next/image";
 import { useAttendance } from "@/lib/attendance-store";
 import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
@@ -44,6 +47,7 @@ export function Sidebar() {
     { label: "My Courses", href: "/student/courses", icon: BookOpen },
     { label: "Attendance History", href: "/student/history", icon: History },
     { label: "Calendar & Schedule", href: "/student/calendar", icon: Calendar },
+    { label: "Queries & Grievances", href: "/student/grievances", icon: MessageSquareText },
     { label: "My Profile", href: "/student/profile", icon: User },
   ];
 
@@ -52,6 +56,7 @@ export function Sidebar() {
     { label: "Active Class Mode", href: "/professor/session/sess-today-01", icon: QrCode, highlight: true },
     { label: "Course Workspaces", href: "/professor/courses", icon: BookOpen },
     { label: "Internal Marks", href: "/professor/courses/course-scb-501", icon: Award },
+    { label: "Student Inquiries", href: "/professor/grievances", icon: MessageSquareText },
     { label: "Course Analytics", href: "/professor/analytics", icon: BarChart3 },
     { label: "Export Reports", href: "/professor/reports", icon: FileSpreadsheet },
     { label: "Class Calendar", href: "/professor/calendar", icon: Calendar },
@@ -66,6 +71,7 @@ export function Sidebar() {
     { label: "Courses & Curricula", href: "/admin/courses", icon: BookOpen },
     { label: "Departments", href: "/admin/departments", icon: Building2 },
     { label: "Security & Audit Logs", href: "/admin/audit-logs", icon: ShieldAlert },
+    { label: "System Diagnostics & Errors", href: "/admin/system-diagnostics", icon: Activity },
     { label: "Admin Profile", href: "/admin/profile", icon: User },
     { label: "System Settings", href: "/admin/settings", icon: Sliders },
   ];
@@ -78,17 +84,30 @@ export function Sidebar() {
       : adminNav;
 
   return (
-    <aside className="hidden md:flex h-screen w-64 flex-col border-r border-border bg-surface-lowest sticky top-0 shrink-0 select-none">
-      {/* Brand Header */}
-      <div className="flex h-16 items-center gap-3 px-6 border-b border-surface-container">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-white font-bold text-base shadow-sm">
-          <GraduationCap className="w-5 h-5 text-tertiary-fixed" />
+    <aside className="hidden md:flex h-screen w-72 flex-col border-r border-border bg-surface-lowest sticky top-0 shrink-0 select-none">
+      {/* Brand Header with Frameless Logo and Enhanced Trilingual Typography */}
+      <div className="flex h-20 items-center gap-3.5 px-4 border-b border-surface-container bg-surface-lowest">
+        <div className="relative shrink-0 flex items-center justify-center w-13 h-13">
+          <Image
+            src="/uohyd-logo.png"
+            alt="University of Hyderabad Logo"
+            width={52}
+            height={52}
+            className="object-contain w-full h-full drop-shadow-xs"
+            priority
+          />
         </div>
-        <div>
-          <h1 className="text-xs font-bold uppercase tracking-wider text-primary">
-            Univ. of Hyderabad
+        <div className="min-w-0 flex-1 space-y-0.5">
+          <p className="text-[11px] font-telugu font-bold text-[#8B1D1D] leading-tight truncate">
+            హైదరాబాదు విశ్వవిద్యాలయం
+          </p>
+          <p className="text-[12px] font-hindi font-bold text-[#8B1D1D] leading-tight truncate">
+            हैदराबाद विश्वविद्यालय
+          </p>
+          <h1 className="text-[12.5px] font-sans font-extrabold text-[#8B1D1D] leading-tight tracking-tight truncate">
+            University of Hyderabad
           </h1>
-          <p className="text-[11px] text-on-surface-variant font-medium">
+          <p className="text-[9.5px] text-on-surface-variant font-semibold tracking-wider uppercase">
             Attendance Portal
           </p>
         </div>

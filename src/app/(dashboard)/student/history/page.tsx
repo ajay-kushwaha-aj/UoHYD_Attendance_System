@@ -36,6 +36,7 @@ export default function StudentHistoryPage() {
       courseCode: "SCB-501",
       courseName: "Molecular Biology & Structural Bioinformatics",
       time: "10:02 AM",
+      hours: 1,
       status: "PRESENT" as AttendanceStatus,
       method: "QR",
       room: "LH-204",
@@ -47,6 +48,7 @@ export default function StudentHistoryPage() {
       courseCode: "SCB-502",
       courseName: "Computational Genomics & Transcriptomics",
       time: "11:34 AM",
+      hours: 1,
       status: "PRESENT" as AttendanceStatus,
       method: "CODE",
       room: "Bioinformatics Lab-1",
@@ -58,10 +60,11 @@ export default function StudentHistoryPage() {
       courseCode: "SCB-501",
       courseName: "Molecular Biology & Structural Bioinformatics",
       time: "10:14 AM",
+      hours: 2,
       status: "PRESENT" as AttendanceStatus,
       method: "MANUAL",
       room: "LH-204",
-      remarks: "Attendance override approved by faculty with medical slip",
+      remarks: "Attendance override approved by faculty with medical slip (2 attendance)",
     },
     {
       id: "h-04",
@@ -69,10 +72,11 @@ export default function StudentHistoryPage() {
       courseCode: "SCB-503",
       courseName: "Systems Biology & Metabolic Modeling",
       time: "02:18 PM",
-      status: "LATE" as AttendanceStatus,
+      hours: 2,
+      status: "PRESENT" as AttendanceStatus,
       method: "MANUAL",
       room: "LH-205",
-      remarks: "Arrived with library clearance note",
+      remarks: "2-hour lecture session (2 attendance)",
     },
     {
       id: "h-05",
@@ -80,9 +84,11 @@ export default function StudentHistoryPage() {
       courseCode: "SCB-504",
       courseName: "Algorithms in Computational Biology",
       time: "03:30 PM",
+      hours: 2,
       status: "PRESENT" as AttendanceStatus,
       method: "QR",
       room: "Computing Facility 2",
+      remarks: "2-hour laboratory practical session",
     },
     {
       id: "h-06",
@@ -90,62 +96,57 @@ export default function StudentHistoryPage() {
       courseCode: "SCB-502",
       courseName: "Computational Genomics & Transcriptomics",
       time: "—",
+      hours: 1,
       status: "ABSENT" as AttendanceStatus,
       method: "SYSTEM",
       room: "Bioinformatics Lab-1",
-      remarks: "Unexcused absence",
+      remarks: "Unexcused absence (1 attendance missed)",
     },
   ];
 
   const filteredHistory = mockHistoryData.filter((item) => {
-    const matchesCourse =
-      selectedCourse === "ALL" ? true : item.courseCode === selectedCourse;
-    const matchesStatus =
-      statusFilter === "ALL" ? true : item.status === statusFilter;
-    const matchesSearch =
+    const matchSearch =
       item.courseName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.courseCode.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (item.remarks && item.remarks.toLowerCase().includes(searchQuery.toLowerCase()));
-    return matchesCourse && matchesStatus && matchesSearch;
+      item.room.toLowerCase().includes(searchQuery.toLowerCase());
+
+    const matchCourse =
+      selectedCourse === "ALL" || item.courseCode === selectedCourse;
+    const matchStatus =
+      statusFilter === "ALL" || item.status === statusFilter;
+
+    return matchSearch && matchCourse && matchStatus;
   });
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <span className="text-xs font-bold uppercase tracking-wider text-tertiary-teal">
-            Audit-Ready Records
-          </span>
-          <h1 className="text-xl md:text-2xl font-bold text-on-surface tracking-tight mt-0.5">
-            Attendance Log & History
-          </h1>
-          <p className="text-xs text-on-surface-variant mt-0.5">
-            Student: <strong className="text-on-surface">{currentStudent.fullName}</strong> ({currentStudent.rollNumber})
-          </p>
-        </div>
-
-        <Button variant="secondary" size="sm" className="self-start sm:self-auto">
-          <Download className="w-3.5 h-3.5" />
-          Download Transcript (PDF)
-        </Button>
+      <div>
+        <h1 className="text-xl sm:text-2xl font-bold text-on-surface flex items-center gap-2">
+          <History className="w-6 h-6 text-primary shrink-0" />
+          <span>Academic Attendance History</span>
+        </h1>
+        <p className="text-xs sm:text-sm text-on-surface-variant mt-1">
+          Complete verifiable ledger of your attendance records, multi-hour lecture blocks, and verification timestamps.
+        </p>
       </div>
 
-      {/* Filter and Search Bar */}
-      <Card className="p-4 bg-surface-lowest">
-        <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 justify-between">
-          <div className="flex-1 max-w-sm">
-            <Input
-              placeholder="Search lectures, dates, remarks..."
-              icon={<Search className="w-4 h-4" />}
+      {/* Filter / Search Card */}
+      <Card className="p-4">
+        <div className="flex flex-col md:flex-row gap-3 items-center justify-between">
+          <div className="relative w-full md:w-80">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-on-surface-variant" />
+            <input
+              type="text"
+              placeholder="Search by course, room or code..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-9 text-xs"
+              className="w-full pl-9 pr-4 py-2 text-xs rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-tertiary-teal/30 text-on-surface"
             />
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Course Dropdown */}
+          <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+            {/* Course Select */}
             <select
               value={selectedCourse}
               onChange={(e) => setSelectedCourse(e.target.value)}
@@ -161,12 +162,12 @@ export default function StudentHistoryPage() {
 
             {/* Status Segment Filters */}
             <div className="flex items-center gap-1 bg-surface-container p-1 rounded-lg text-xs">
-              {(["ALL", "PRESENT", "LATE", "ABSENT"] as const).map((st) => (
+              {(["ALL", "PRESENT", "ABSENT"] as const).map((st) => (
                 <button
                   key={st}
                   onClick={() => setStatusFilter(st)}
                   className={cn(
-                    "px-2.5 py-1 rounded text-[11px] font-semibold transition-colors",
+                    "px-3 py-1 rounded text-[11px] font-semibold transition-colors",
                     statusFilter === st
                       ? "bg-primary text-white"
                       : "text-on-surface-variant hover:bg-surface-low"
@@ -188,6 +189,7 @@ export default function StudentHistoryPage() {
               <tr className="border-b border-surface-container bg-surface-low/80 text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">
                 <th className="px-6 py-3.5">Date & Time</th>
                 <th className="px-6 py-3.5">Course Code & Name</th>
+                <th className="px-6 py-3.5">Duration / Attendance</th>
                 <th className="px-6 py-3.5">Location</th>
                 <th className="px-6 py-3.5">Method</th>
                 <th className="px-6 py-3.5">Status</th>
@@ -216,6 +218,23 @@ export default function StudentHistoryPage() {
                     </div>
                   </td>
 
+                  <td className="px-6 py-3">
+                    <span
+                      className={cn(
+                        "inline-flex items-center px-2 py-0.5 rounded text-[10.5px] font-bold border",
+                        item.room.toLowerCase().includes("lab") || item.method === "QR" && item.courseCode === "SCB-504"
+                          ? "bg-teal-50 text-teal-800 border-teal-200"
+                          : item.hours === 2
+                          ? "bg-indigo-50 text-indigo-800 border-indigo-200"
+                          : "bg-surface-container text-on-surface-variant border-border"
+                      )}
+                    >
+                      {item.room.toLowerCase().includes("lab") || item.courseCode === "SCB-504"
+                        ? "Lab (1 Attendance)"
+                        : `${item.hours || 1} Hr (${item.hours === 2 ? "2 Attendance" : "1 Attendance"})`}
+                    </span>
+                  </td>
+
                   <td className="px-6 py-3 text-on-surface-variant">
                     {item.room}
                   </td>
@@ -228,13 +247,7 @@ export default function StudentHistoryPage() {
 
                   <td className="px-6 py-3">
                     <Badge
-                      variant={
-                        item.status === "PRESENT"
-                          ? "present"
-                          : item.status === "LATE"
-                          ? "late"
-                          : "absent"
-                      }
+                      variant={item.status === "PRESENT" ? "present" : "absent"}
                       withDot
                     >
                       {item.status}

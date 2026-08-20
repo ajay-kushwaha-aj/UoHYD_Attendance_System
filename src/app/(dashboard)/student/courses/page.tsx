@@ -69,10 +69,34 @@ export default function StudentCoursesPage() {
                 </div>
               </div>
 
-              <div className="mt-5 space-y-1.5">
+              <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
+                <div className="p-2.5 rounded-lg bg-surface-low/80 border border-surface-container space-y-1">
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="font-semibold text-primary">Theory Lectures</span>
+                    <span className="font-bold text-primary">{item.theoryPercentage.toFixed(1)}%</span>
+                  </div>
+                  <div className="text-[11px] text-on-surface-variant font-medium">
+                    {item.theoryAttended} / {item.theoryConducted} units
+                  </div>
+                </div>
+
+                <div className="p-2.5 rounded-lg bg-surface-low/80 border border-surface-container space-y-1">
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="font-semibold text-tertiary-teal">Lab Sessions</span>
+                    <span className="font-bold text-tertiary-teal">
+                      {item.labConducted > 0 ? `${item.labPercentage.toFixed(1)}%` : "N/A"}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-on-surface-variant font-medium">
+                    {item.labConducted > 0 ? `${item.labAttended} / ${item.labConducted} labs (1 attendance)` : "No Lab"}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 space-y-1.5">
                 <div className="flex justify-between text-xs text-on-surface-variant font-medium">
-                  <span>Attendance: {item.attended} / {item.conducted} lectures</span>
-                  <span>{item.percentage.toFixed(1)}%</span>
+                  <span>Overall Attendance: {item.attended} / {item.conducted} Total Units</span>
+                  <span className="font-bold text-on-surface">{item.percentage.toFixed(1)}%</span>
                 </div>
                 <div className="w-full bg-surface-container rounded-full h-2 overflow-hidden">
                   <div
@@ -88,10 +112,10 @@ export default function StudentCoursesPage() {
                 {item.course.credits} Credits
               </span>
               <Link
-                href="/student/history"
+                href={`/student/courses/${item.course.id}`}
                 className="font-semibold text-tertiary-teal hover:underline flex items-center gap-1"
               >
-                View Attendance Logs <ArrowRight className="w-3.5 h-3.5" />
+                Course Details & Breakdown <ArrowRight className="w-3.5 h-3.5" />
               </Link>
             </div>
           </Card>

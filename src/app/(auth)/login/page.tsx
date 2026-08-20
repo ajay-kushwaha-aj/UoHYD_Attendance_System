@@ -16,6 +16,7 @@ import {
   Building2,
   Sparkles,
 } from "lucide-react";
+import Image from "next/image";
 import { useAuth, DEMO_ACCOUNTS } from "@/lib/auth-context";
 import { UserRole } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -84,20 +85,37 @@ export default function LoginPage() {
 
       <div className="w-full max-w-xl space-y-6 relative z-10 animate-in fade-in zoom-in-95 duration-200">
         {/* University Brand Header */}
-        <div className="text-center space-y-2">
-          <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-primary text-white shadow-elevation-1 border border-primary-container">
-            <GraduationCap className="w-9 h-9 text-tertiary-fixed" />
-          </div>
-          <div>
-            <span className="text-[11px] font-bold uppercase tracking-widest text-tertiary-teal">
-              University of Hyderabad • School of Life Sciences
-            </span>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-primary mt-0.5">
-              Attendance & Academic Portal
-            </h1>
-            <p className="text-xs text-on-surface-variant max-w-md mx-auto mt-1">
-              Role-Based Authentication for Students, Teaching Faculty, and Department Administrators.
-            </p>
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6 bg-surface-lowest p-5 sm:p-6 rounded-3xl border border-border shadow-elevation-1">
+            <div className="relative h-28 w-28 sm:h-32 sm:w-32 shrink-0 flex items-center justify-center">
+              <Image
+                src="/uohyd-logo.png"
+                alt="University of Hyderabad Logo"
+                width={128}
+                height={128}
+                className="object-contain w-full h-full drop-shadow-sm"
+                priority
+              />
+            </div>
+            <div className="text-center sm:text-left space-y-1 select-none">
+              <div className="text-lg sm:text-xl md:text-2xl font-telugu font-bold text-[#8B1D1D] leading-tight">
+                హైదరాబాదు విశ్వవిద్యాలయం
+              </div>
+              <div className="text-lg sm:text-xl md:text-2xl font-hindi font-bold text-[#8B1D1D] leading-tight">
+                हैदराबाद विश्वविद्यालय
+              </div>
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-sans font-black text-[#8B1D1D] tracking-tight leading-tight">
+                University of Hyderabad
+              </h1>
+              <div className="pt-1.5 flex flex-wrap items-center justify-center sm:justify-start gap-2 text-xs">
+                <span className="inline-block bg-primary/10 px-2.5 py-0.5 rounded-md font-bold text-primary text-[11px] uppercase tracking-wider">
+                  Attendance & Academic Portal
+                </span>
+                <span className="text-[11px] text-on-surface-variant font-medium">
+                  School of Life Sciences
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 

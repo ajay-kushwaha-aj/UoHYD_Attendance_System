@@ -18,6 +18,11 @@ import {
   AttendanceRecord,
   AuditLog,
   AttendanceStatus,
+  CancelledClassRecord,
+  AppNotification,
+  StudentGrievance,
+  GrievanceStatus,
+  GrievanceResponse,
 } from "@/types";
 import {
   MOCK_BATCHES,
@@ -31,6 +36,8 @@ import {
   MOCK_MARK_AUDIT_LOGS,
   MOCK_SESSIONS,
   MOCK_AUDIT_LOGS,
+  MOCK_CANCELLED_CLASSES,
+  MOCK_GRIEVANCES,
 } from "./mock-data";
 
 const STORAGE_KEYS = {
@@ -42,9 +49,65 @@ const STORAGE_KEYS = {
   MARKS: "uohyd_internal_marks_v1",
   AUDIT_LOGS: "uohyd_attendance_audit_logs_v1",
   MARK_AUDIT_LOGS: "uohyd_mark_audit_logs_v1",
+  CANCELLED_CLASSES: "uohyd_cancelled_classes_v1",
+  NOTIFICATIONS: "uohyd_notifications_v1",
+  GRIEVANCES: "uohyd_student_grievances_v1",
   SELECTED_BATCH: "uohyd_selected_batch_id",
   SELECTED_SECTION: "uohyd_selected_section",
 };
+
+export const INITIAL_NOTIFICATIONS: AppNotification[] = [
+  {
+    id: "notif-1",
+    title: "Class Cancellation Notice",
+    message: "SCB-501 (Molecular Biology & Structural Bioinformatics) session on Wednesday 10:00 AM cancelled by Prof. K. Venkatesh Rao (University Faculty Research Conclave).",
+    type: "CANCELLATION",
+    timestamp: "10m ago",
+    read: false,
+    targetRole: "all",
+    link: "/student/calendar",
+  },
+  {
+    id: "notif-2",
+    title: "Internal Assessment Marks Published",
+    message: "Internal evaluation for SCB-501 (Molecular Biology & Structural Bioinformatics) has been approved and published. Total score: 28/30 (93.3% - PASS).",
+    type: "ACADEMIC",
+    timestamp: "45m ago",
+    read: false,
+    targetRole: "all",
+    link: "/student/courses/scb-501",
+  },
+  {
+    id: "notif-3",
+    title: "Attendance Recorded (2 Attendance)",
+    message: "Attendance marked PRESENT for 2-hour lecture session in SCB-501 (2 attendance recorded) via dynamic QR verification.",
+    type: "SUCCESS",
+    timestamp: "2h ago",
+    read: false,
+    targetRole: "student",
+    link: "/student/history",
+  },
+  {
+    id: "notif-4",
+    title: "Statutory Compliance Standing",
+    message: "Ajay Kumar (23MCMS01) is in good academic standing at 91.3% overall attendance across 15 enrolled credit units.",
+    type: "INFO",
+    timestamp: "1d ago",
+    read: true,
+    targetRole: "all",
+    link: "/student/dashboard",
+  },
+  {
+    id: "notif-5",
+    title: "Live Practical Session Scheduled",
+    message: "Algorithms in Computational Biology (SCB-504) laboratory practical session scheduled in Computing Facility 2.",
+    type: "INFO",
+    timestamp: "2d ago",
+    read: true,
+    targetRole: "all",
+    link: "/student/calendar",
+  },
+];
 
 interface AttendanceContextType {
   currentRole: UserRole;
@@ -63,13 +126,45 @@ interface AttendanceContextType {
   sessions: AttendanceSession[];
   activeSession: AttendanceSession | null;
   auditLogs: AuditLog[];
+  cancelledClasses: CancelledClassRecord[];
   assessmentSchemes: AssessmentScheme[];
   internalMarks: StudentInternalMark[];
   markAuditLogs: MarkAuditLog[];
+  notifications: AppNotification[];
+  unreadNotificationCount: number;
+  markNotificationAsRead: (id: string) => void;
+  markAllNotificationsAsRead: () => void;
+  clearNotification: (id: string) => void;
+  clearAllNotifications: () => void;
+  addNotification: (notif: Omit<AppNotification, "id" | "timestamp" | "read">) => void;
+  grievances: StudentGrievance[];
+  submitGrievance: (
+    data: Omit<StudentGrievance, "id" | "ticketNumber" | "createdAt" | "updatedAt" | "status" | "responses">
+  ) => StudentGrievance;
+  respondToGrievance: (
+    grievanceId: string,
+    message: string,
+    newStatus?: GrievanceStatus,
+    resolutionNotes?: string
+  ) => void;
+  updateGrievanceStatus: (grievanceId: string, status: GrievanceStatus, resolutionNotes?: string) => void;
   // Actions
   enrollStudent: (studentData: Omit<StudentProfile, "id">) => StudentProfile;
   addFacultyMember: (facultyData: Omit<ProfessorProfile, "id">) => ProfessorProfile;
   createCourse: (courseData: Omit<Course, "id" | "totalConductedSessions" | "totalStudents">) => Course;
+  cancelScheduledClass: (params: {
+    courseId: string;
+    slotId?: string;
+    sessionId?: string;
+    date?: string;
+    day?: string;
+    time?: string;
+    room?: string;
+    reason: string;
+    additionalRemarks?: string;
+    cancelledBy?: string;
+  }) => void;
+  uncancelClass: (cancellationId: string) => void;
   updateCourseSchedule: (
     courseId: string,
     scheduleData: {
@@ -108,7 +203,9 @@ interface AttendanceContextType {
     courseId: string,
     type: "MANUAL" | "QR" | "CODE",
     batchId?: string,
-    section?: string
+    section?: string,
+    hours?: number,
+    category?: "THEORY" | "LAB"
   ) => AttendanceSession;
   updateStudentRecord: (
     sessionId: string,
@@ -127,16 +224,29 @@ interface AttendanceContextType {
   regenerateQrToken: (sessionId: string) => string;
   regenerateCode: (sessionId: string) => string;
   getStudentAttendanceStats: (studentId: string) => {
+    theoryConducted: number;
+    theoryAttended: number;
+    theoryPercentage: number;
+    labConducted: number;
+    labAttended: number;
+    labPercentage: number;
     totalConducted: number;
     totalAttended: number;
     overallPercentage: number;
     status: "good" | "warning" | "critical";
     courseStats: Array<{
       course: Course;
+      theoryConducted: number;
+      theoryAttended: number;
+      theoryAbsent: number;
+      theoryPercentage: number;
+      labConducted: number;
+      labAttended: number;
+      labAbsent: number;
+      labPercentage: number;
       conducted: number;
       attended: number;
       absent: number;
-      late: number;
       percentage: number;
       status: "good" | "warning" | "critical";
       classesNeededFor75: number;
@@ -161,9 +271,12 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
 
   const [sessions, setSessions] = useState<AttendanceSession[]>(MOCK_SESSIONS);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(MOCK_AUDIT_LOGS);
+  const [cancelledClasses, setCancelledClasses] = useState<CancelledClassRecord[]>(MOCK_CANCELLED_CLASSES);
   const [assessmentSchemes, setAssessmentSchemes] = useState<AssessmentScheme[]>(MOCK_ASSESSMENT_SCHEMES);
   const [internalMarks, setInternalMarks] = useState<StudentInternalMark[]>(MOCK_INTERNAL_MARKS);
   const [markAuditLogs, setMarkAuditLogs] = useState<MarkAuditLog[]>(MOCK_MARK_AUDIT_LOGS);
+  const [notifications, setNotifications] = useState<AppNotification[]>(INITIAL_NOTIFICATIONS);
+  const [grievances, setGrievances] = useState<StudentGrievance[]>(MOCK_GRIEVANCES);
 
   const isHydrated = useRef(false);
 
@@ -182,6 +295,9 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
       const storedSessions = localStorage.getItem(STORAGE_KEYS.SESSIONS);
       if (storedSessions) setSessions(JSON.parse(storedSessions));
 
+      const storedCancelled = localStorage.getItem(STORAGE_KEYS.CANCELLED_CLASSES);
+      if (storedCancelled) setCancelledClasses(JSON.parse(storedCancelled));
+
       const storedSchemes = localStorage.getItem(STORAGE_KEYS.SCHEMES);
       if (storedSchemes) setAssessmentSchemes(JSON.parse(storedSchemes));
 
@@ -193,6 +309,12 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
 
       const storedMarkAuditLogs = localStorage.getItem(STORAGE_KEYS.MARK_AUDIT_LOGS);
       if (storedMarkAuditLogs) setMarkAuditLogs(JSON.parse(storedMarkAuditLogs));
+
+      const storedNotifs = localStorage.getItem(STORAGE_KEYS.NOTIFICATIONS);
+      if (storedNotifs) setNotifications(JSON.parse(storedNotifs));
+
+      const storedGrievances = localStorage.getItem(STORAGE_KEYS.GRIEVANCES);
+      if (storedGrievances) setGrievances(JSON.parse(storedGrievances));
 
       const storedBatchId = localStorage.getItem(STORAGE_KEYS.SELECTED_BATCH);
       if (storedBatchId) setSelectedBatchIdState(storedBatchId);
@@ -238,6 +360,13 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
   useEffect(() => {
     if (!isHydrated.current) return;
     try {
+      localStorage.setItem(STORAGE_KEYS.CANCELLED_CLASSES, JSON.stringify(cancelledClasses));
+    } catch (e) {}
+  }, [cancelledClasses]);
+
+  useEffect(() => {
+    if (!isHydrated.current) return;
+    try {
       localStorage.setItem(STORAGE_KEYS.SCHEMES, JSON.stringify(assessmentSchemes));
     } catch (e) {}
   }, [assessmentSchemes]);
@@ -262,6 +391,20 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
       localStorage.setItem(STORAGE_KEYS.MARK_AUDIT_LOGS, JSON.stringify(markAuditLogs));
     } catch (e) {}
   }, [markAuditLogs]);
+
+  useEffect(() => {
+    if (!isHydrated.current) return;
+    try {
+      localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(notifications));
+    } catch (e) {}
+  }, [notifications]);
+
+  useEffect(() => {
+    if (!isHydrated.current) return;
+    try {
+      localStorage.setItem(STORAGE_KEYS.GRIEVANCES, JSON.stringify(grievances));
+    } catch (e) {}
+  }, [grievances]);
 
   const setSelectedBatchId = (id: string) => {
     setSelectedBatchIdState(id);
@@ -638,7 +781,9 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
     courseId: string,
     type: "MANUAL" | "QR" | "CODE",
     bId = selectedBatchId,
-    sec = selectedSection
+    sec = selectedSection,
+    sessionHours = 1,
+    category: "THEORY" | "LAB" = "THEORY"
   ): AttendanceSession => {
     const course = courses.find((c) => c.id === courseId) || courses[0];
     const batch = batches.find((b) => b.id === bId) || batches[0];
@@ -658,6 +803,9 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
       markedAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     }));
 
+    // For Lab/Practical classes, count only 1 attendance mark (no hour multiplier)
+    const effectiveHours = category === "LAB" ? 1 : sessionHours;
+
     const newSession: AttendanceSession = {
       id: newSessionId,
       courseId: course.id,
@@ -673,10 +821,12 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
       room: course.room,
       date: new Date().toISOString().split("T")[0],
       startTime: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-      endTime: new Date(Date.now() + 90 * 60 * 1000).toLocaleTimeString([], {
+      endTime: new Date(Date.now() + sessionHours * 60 * 60 * 1000).toLocaleTimeString([], {
         hour: "2-digit",
         minute: "2-digit",
       }),
+      hours: effectiveHours,
+      sessionCategory: category,
       sessionType: type,
       status: "ACTIVE",
       qrToken,
@@ -774,7 +924,7 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
     );
   };
 
-  const lockSession = (sessionId: string, reason = "Attendance session completed & locked by instructor.") => {
+  const lockSession = (sessionId: string, reason = "Session completed and verified.") => {
     setSessions((prevSessions) =>
       prevSessions.map((session) => {
         if (session.id !== sessionId) return session;
@@ -832,6 +982,304 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
     }
   };
 
+  const cancelScheduledClass = ({
+    courseId,
+    slotId,
+    sessionId,
+    reason,
+    additionalRemarks,
+    day,
+    time,
+    room,
+  }: {
+    courseId: string;
+    slotId?: string;
+    sessionId?: string;
+    reason: string;
+    additionalRemarks?: string;
+    day?: string;
+    time?: string;
+    room?: string;
+  }) => {
+    const course = courses.find((c) => c.id === courseId);
+    const targetSlot = course?.timeTableSlots?.find((s) => s.id === slotId);
+    const targetSession = sessions.find((s) => s.id === sessionId);
+
+    const recordDay = day || targetSlot?.day || "Monday";
+    const recordTime = time || (targetSlot ? `${targetSlot.startTime} – ${targetSlot.endTime}` : course?.scheduleTime || "10:00 AM");
+    const recordRoom = room || targetSlot?.room || targetSession?.room || course?.room || "LH-204";
+
+    const newRecord: CancelledClassRecord = {
+      id: `cancel-${Date.now()}`,
+      courseId,
+      courseCode: course?.code || targetSession?.courseCode || "SCB-501",
+      courseName: course?.name || targetSession?.courseName || "Molecular Biology & Structural Bioinformatics",
+      slotId,
+      sessionId,
+      date: new Date().toISOString().split("T")[0],
+      day: recordDay,
+      time: recordTime,
+      room: recordRoom,
+      professorId: currentProfessor.id,
+      professorName: currentProfessor.fullName,
+      reason,
+      additionalRemarks,
+      cancelledAt: new Date().toISOString(),
+    };
+
+    setCancelledClasses((prev) => [newRecord, ...prev]);
+
+    if (sessionId) {
+      setSessions((prev) =>
+        prev.map((s) => {
+          if (s.id === sessionId) {
+            return {
+              ...s,
+              status: "CANCELLED",
+              isCancelled: true,
+              cancelReason: reason,
+              cancelledBy: currentProfessor.fullName,
+              cancelledAt: new Date().toISOString(),
+            };
+          }
+          return s;
+        })
+      );
+    }
+
+    if (slotId && courseId) {
+      setCourses((prev) =>
+        prev.map((c) => {
+          if (c.id === courseId && c.timeTableSlots) {
+            return {
+              ...c,
+              timeTableSlots: c.timeTableSlots.map((slot) => {
+                if (slot.id === slotId) {
+                  return {
+                    ...slot,
+                    isCancelled: true,
+                    cancelReason: reason,
+                    cancelledBy: currentProfessor.fullName,
+                    cancelledAt: new Date().toISOString(),
+                  };
+                }
+                return slot;
+              }),
+            };
+          }
+          return c;
+        })
+      );
+    }
+
+    const newAudit: AuditLog = {
+      id: `audit-${Date.now()}`,
+      sessionId: sessionId || `slot-${slotId || "timetable"}`,
+      courseName: course?.name || "Class Schedule",
+      actorId: currentProfessor.id,
+      actorName: currentProfessor.fullName,
+      actorRole: currentRole,
+      action: "CLASS_CANCELLED",
+      oldValue: "SCHEDULED",
+      newValue: "CANCELLED",
+      reason: `Class Cancelled: ${reason}${additionalRemarks ? ` | Notice: ${additionalRemarks}` : ""}`,
+      timestamp: new Date().toISOString(),
+    };
+    setAuditLogs((prev) => [newAudit, ...prev]);
+
+    // Dispatch automatic institutional notification
+    addNotification({
+      title: `Class Cancelled: ${course?.code || "Course Schedule"}`,
+      message: `${course?.name || "Lecture session"} on ${recordDay} (${recordTime}) has been cancelled by ${currentProfessor.fullName}. Reason: ${reason}`,
+      type: "CANCELLATION",
+      targetRole: "all",
+      link: "/student/calendar",
+    });
+  };
+
+  const markNotificationAsRead = (id: string) => {
+    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+  };
+
+  const markAllNotificationsAsRead = () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  };
+
+  const clearNotification = (id: string) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  };
+
+  const clearAllNotifications = () => {
+    setNotifications([]);
+  };
+
+  const addNotification = (notif: Omit<AppNotification, "id" | "timestamp" | "read">) => {
+    const newNotif: AppNotification = {
+      ...notif,
+      id: `notif-${Date.now()}`,
+      timestamp: "Just now",
+      read: false,
+    };
+    setNotifications((prev) => [newNotif, ...prev]);
+  };
+
+  const unreadNotificationCount = notifications.filter(
+    (n) => !n.read && (n.targetRole === "all" || n.targetRole === currentRole)
+  ).length;
+
+  const submitGrievance = (
+    data: Omit<StudentGrievance, "id" | "ticketNumber" | "createdAt" | "updatedAt" | "status" | "responses">
+  ): StudentGrievance => {
+    const ticketSeq = Math.floor(100 + Math.random() * 900);
+    const newGrievance: StudentGrievance = {
+      ...data,
+      id: `grv-${Date.now()}`,
+      ticketNumber: `UOH-GRV-2026-${ticketSeq}`,
+      status: "PENDING",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      responses: [],
+    };
+
+    setGrievances((prev) => [newGrievance, ...prev]);
+
+    // Dispatch automatic institutional notification to mentioned professor / department
+    if (data.targetProfessorId) {
+      addNotification({
+        title: `Student Query: ${data.studentName} (${data.studentRollNo})`,
+        message: `"${data.subject}" — Directed to you for ${data.courseCode || "Curriculum Inquiry"}.`,
+        type: "GRIEVANCE",
+        targetRole: "professor",
+        link: "/professor/grievances",
+      });
+    }
+
+    // Also notify admin
+    addNotification({
+      title: `New Grievance #${newGrievance.ticketNumber}`,
+      message: `From ${data.studentName} (${data.studentRollNo}): "${data.subject}" (Assigned: ${data.targetProfessorName || "Department"})`,
+      type: "INFO",
+      targetRole: "admin",
+      link: "/admin/dashboard",
+    });
+
+    return newGrievance;
+  };
+
+  const respondToGrievance = (
+    grievanceId: string,
+    message: string,
+    newStatus?: GrievanceStatus,
+    resolutionNotes?: string
+  ) => {
+    const authorName =
+      currentRole === "professor"
+        ? currentProfessor.fullName
+        : currentRole === "admin"
+        ? currentAdmin.fullName
+        : currentStudent.fullName;
+
+    const newResponse: GrievanceResponse = {
+      id: `resp-${Date.now()}`,
+      authorId: currentRole === "professor" ? currentProfessor.id : currentRole === "admin" ? currentAdmin.id : currentStudent.id,
+      authorName,
+      authorRole: currentRole,
+      message,
+      createdAt: new Date().toISOString(),
+    };
+
+    setGrievances((prev) =>
+      prev.map((g) => {
+        if (g.id === grievanceId) {
+          return {
+            ...g,
+            status: newStatus || g.status,
+            resolutionNotes: resolutionNotes !== undefined ? resolutionNotes : g.resolutionNotes,
+            updatedAt: new Date().toISOString(),
+            responses: [...g.responses, newResponse],
+          };
+        }
+        return g;
+      })
+    );
+
+    const targetGrievance = grievances.find((g) => g.id === grievanceId);
+    if (targetGrievance) {
+      // Notify student
+      addNotification({
+        title: `Faculty Response: Ticket #${targetGrievance.ticketNumber}`,
+        message: `${authorName}: "${message.slice(0, 80)}${message.length > 80 ? "..." : ""}"`,
+        type: "ACADEMIC",
+        targetRole: "student",
+        link: "/student/grievances",
+      });
+    }
+  };
+
+  const updateGrievanceStatus = (grievanceId: string, status: GrievanceStatus, resolutionNotes?: string) => {
+    setGrievances((prev) =>
+      prev.map((g) => {
+        if (g.id === grievanceId) {
+          return {
+            ...g,
+            status,
+            resolutionNotes: resolutionNotes !== undefined ? resolutionNotes : g.resolutionNotes,
+            updatedAt: new Date().toISOString(),
+          };
+        }
+        return g;
+      })
+    );
+  };
+
+  const uncancelClass = (recordId: string) => {
+    const target = cancelledClasses.find((c) => c.id === recordId);
+    setCancelledClasses((prev) => prev.filter((c) => c.id !== recordId));
+
+    if (target?.sessionId) {
+      setSessions((prev) =>
+        prev.map((s) => {
+          if (s.id === target.sessionId) {
+            return {
+              ...s,
+              status: "ACTIVE",
+              isCancelled: false,
+              cancelReason: undefined,
+              cancelledBy: undefined,
+              cancelledAt: undefined,
+            };
+          }
+          return s;
+        })
+      );
+    }
+
+    if (target?.slotId && target?.courseId) {
+      setCourses((prev) =>
+        prev.map((c) => {
+          if (c.id === target.courseId && c.timeTableSlots) {
+            return {
+              ...c,
+              timeTableSlots: c.timeTableSlots.map((slot) => {
+                if (slot.id === target.slotId) {
+                  return {
+                    ...slot,
+                    isCancelled: false,
+                    cancelReason: undefined,
+                    cancelledBy: undefined,
+                    cancelledAt: undefined,
+                  };
+                }
+                return slot;
+              }),
+            };
+          }
+          return c;
+        })
+      );
+    }
+  };
+
   const submitStudentAttendance = (studentId: string, tokenOrCode: string) => {
     const active = sessions.find((s) => s.status === "ACTIVE");
     if (!active) {
@@ -868,9 +1316,11 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
       })
     );
 
+    const isLab = active.sessionCategory === "LAB";
+    const creditsGranted = isLab ? 1 : active.hours || 1;
     return {
       success: true,
-      message: `Verified! Marked PRESENT for ${active.courseCode} in ${active.room}.`,
+      message: `Verified! Marked PRESENT (${isLab ? "1 Lab Attendance Mark" : `${creditsGranted} Theory Attendance ${creditsGranted > 1 ? "Marks" : "Mark"}`}) for ${active.courseCode} in ${active.room}.`,
       courseName: active.courseName,
     };
   };
@@ -893,10 +1343,59 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
 
   const getStudentAttendanceStats = (studentId: string) => {
     const courseStats = courses.map((course, idx) => {
-      const conducted = course.totalConductedSessions;
-      const attended = idx === 0 ? 24 : idx === 1 ? 23 : idx === 2 ? 21 : 17;
-      const absent = Math.max(0, conducted - attended);
-      const late = idx === 0 ? 1 : 0;
+      // Calculate dynamic sessions conducted for this course separated by Theory vs Lab
+      const courseSessions = sessions.filter((s) => s.courseId === course.id && s.status !== "CANCELLED");
+
+      let dynTheoryConducted = 0;
+      let dynTheoryAttended = 0;
+      let dynLabConducted = 0;
+      let dynLabAttended = 0;
+
+      courseSessions.forEach((sess) => {
+        const isLab = sess.sessionCategory === "LAB" || sess.room.toLowerCase().includes("lab");
+        const rec = sess.records.find((r) => r.studentId === studentId);
+        const isPresent = rec && rec.status === "PRESENT";
+
+        if (isLab) {
+          // Lab class: strictly 1 attendance mark, no hour multiplier
+          dynLabConducted += 1;
+          if (isPresent) dynLabAttended += 1;
+        } else {
+          // Theory class: follows hour multiplier (1 hr = 1 mark, 2 hrs = 2 marks)
+          const h = sess.hours || 1;
+          dynTheoryConducted += h;
+          if (isPresent) dynTheoryAttended += h;
+        }
+      });
+
+      // Realistic curriculum baseline distribution for Theory & Lab per course
+      // SCB-501: 20 Theory units, 6 Lab units (Total 26)
+      // SCB-502: 16 Theory units, 8 Lab units (Total 24)
+      // SCB-503: 22 Theory units, 0 Lab units (Total 22)
+      // SCB-504: 6 Theory units, 12 Lab units (Total 18)
+      const baseTheoryConducted = idx === 0 ? 20 : idx === 1 ? 16 : idx === 2 ? 22 : 6;
+      const baseTheoryAttended = idx === 0 ? 18 : idx === 1 ? 15 : idx === 2 ? 21 : 5;
+
+      const baseLabConducted = idx === 0 ? 6 : idx === 1 ? 8 : idx === 2 ? 0 : 12;
+      const baseLabAttended = idx === 0 ? 6 : idx === 1 ? 8 : idx === 2 ? 0 : 12;
+
+      const theoryConducted = dynTheoryConducted > 0 ? dynTheoryConducted : baseTheoryConducted;
+      const theoryAttended = dynTheoryConducted > 0 ? dynTheoryAttended : baseTheoryAttended;
+      const theoryAbsent = Math.max(0, theoryConducted - theoryAttended);
+      const theoryPercentage =
+        theoryConducted > 0 ? parseFloat(((theoryAttended / theoryConducted) * 100).toFixed(1)) : 100;
+
+      const labConducted = dynLabConducted > 0 ? dynLabConducted : baseLabConducted;
+      const labAttended = dynLabConducted > 0 ? dynLabAttended : baseLabAttended;
+      const labAbsent = Math.max(0, labConducted - labAttended);
+      const labPercentage =
+        labConducted > 0
+          ? parseFloat(((labAttended / labConducted) * 100).toFixed(1))
+          : 100;
+
+      const conducted = theoryConducted + labConducted;
+      const attended = theoryAttended + labAttended;
+      const absent = theoryAbsent + labAbsent;
       const percentage = conducted > 0 ? parseFloat(((attended / conducted) * 100).toFixed(1)) : 100;
 
       const requiredClassesFor75 = Math.max(
@@ -912,10 +1411,17 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
 
       return {
         course,
+        theoryConducted,
+        theoryAttended,
+        theoryAbsent,
+        theoryPercentage,
+        labConducted,
+        labAttended,
+        labAbsent,
+        labPercentage,
         conducted,
         attended,
         absent,
-        late,
         percentage,
         status,
         classesNeededFor75: requiredClassesFor75,
@@ -923,8 +1429,22 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
       };
     });
 
-    const totalConducted = courseStats.reduce((acc, c) => acc + c.conducted, 0);
-    const totalAttended = courseStats.reduce((acc, c) => acc + c.attended, 0);
+    const totalTheoryConducted = courseStats.reduce((acc, c) => acc + c.theoryConducted, 0);
+    const totalTheoryAttended = courseStats.reduce((acc, c) => acc + c.theoryAttended, 0);
+    const theoryPercentage =
+      totalTheoryConducted > 0
+        ? parseFloat(((totalTheoryAttended / totalTheoryConducted) * 100).toFixed(1))
+        : 100;
+
+    const totalLabConducted = courseStats.reduce((acc, c) => acc + c.labConducted, 0);
+    const totalLabAttended = courseStats.reduce((acc, c) => acc + c.labAttended, 0);
+    const labPercentage =
+      totalLabConducted > 0
+        ? parseFloat(((totalLabAttended / totalLabConducted) * 100).toFixed(1))
+        : 100;
+
+    const totalConducted = totalTheoryConducted + totalLabConducted;
+    const totalAttended = totalTheoryAttended + totalLabAttended;
     const overallPercentage =
       totalConducted > 0
         ? parseFloat(((totalAttended / totalConducted) * 100).toFixed(1))
@@ -935,6 +1455,12 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
     else if (overallPercentage < 75) status = "warning";
 
     return {
+      theoryConducted: totalTheoryConducted,
+      theoryAttended: totalTheoryAttended,
+      theoryPercentage,
+      labConducted: totalLabConducted,
+      labAttended: totalLabAttended,
+      labPercentage,
       totalConducted,
       totalAttended,
       overallPercentage,
@@ -962,12 +1488,26 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
         sessions,
         activeSession,
         auditLogs,
+        cancelledClasses,
         assessmentSchemes,
         internalMarks,
         markAuditLogs,
+        notifications,
+        unreadNotificationCount,
+        markNotificationAsRead,
+        markAllNotificationsAsRead,
+        clearNotification,
+        clearAllNotifications,
+        addNotification,
+        grievances,
+        submitGrievance,
+        respondToGrievance,
+        updateGrievanceStatus,
         enrollStudent,
         addFacultyMember,
         createCourse,
+        cancelScheduledClass,
+        uncancelClass,
         updateCourseSchedule,
         resetToDefaultData,
         getScopedStudents,

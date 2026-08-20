@@ -95,7 +95,10 @@ const config: Config = {
         },
       },
       fontFamily: {
-        sans: ["Inter", "system-ui", "-apple-system", "sans-serif"],
+        sans: ["var(--font-inter)", "Inter", "system-ui", "-apple-system", "sans-serif"],
+        telugu: ["var(--font-telugu)", "system-ui", "sans-serif"],
+        hindi: ["var(--font-devanagari)", "system-ui", "sans-serif"],
+        devanagari: ["var(--font-devanagari)", "system-ui", "sans-serif"],
       },
       boxShadow: {
         "elevation-1": "0 4px 6px -1px rgba(26, 54, 93, 0.05), 0 2px 4px -1px rgba(26, 54, 93, 0.03)",

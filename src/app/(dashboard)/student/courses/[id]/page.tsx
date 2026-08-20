@@ -102,13 +102,13 @@ export default function StudentCourseDetailPage({
       </div>
 
       {activeTab === "attendance" && (
-        <>
+        <div className="space-y-6">
           {/* Metrics Row */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard
-              title="Attendance Percentage"
+              title="Overall Attendance"
               value={`${courseStat.percentage.toFixed(1)}%`}
-              subtitle="Requirement: ≥ 75.0%"
+              subtitle={`${courseStat.attended} / ${courseStat.conducted} Total Units`}
               statusVariant={courseStat.status}
               icon={<TrendingUp className="w-5 h-5 text-emerald-600" />}
               badge={
@@ -130,13 +130,25 @@ export default function StudentCourseDetailPage({
               }
             />
             <StatCard
-              title="Attended Lectures"
-              value={`${courseStat.attended} / ${courseStat.conducted}`}
-              subtitle={`${courseStat.absent} unexcused absences`}
-              icon={<CheckCircle2 className="w-5 h-5 text-primary-container" />}
+              title="Theory Attendance"
+              value={`${courseStat.theoryPercentage.toFixed(1)}%`}
+              subtitle={`${courseStat.theoryAttended} / ${courseStat.theoryConducted} lecture units (1-2 Hrs)`}
+              statusVariant={courseStat.theoryPercentage >= 75 ? "good" : "warning"}
+              icon={<BookOpen className="w-5 h-5 text-primary-container" />}
             />
             <StatCard
-              title="Target Buffer"
+              title="Lab / Practical Attendance"
+              value={courseStat.labConducted > 0 ? `${courseStat.labPercentage.toFixed(1)}%` : "N/A"}
+              subtitle={
+                courseStat.labConducted > 0
+                  ? `${courseStat.labAttended} / ${courseStat.labConducted} lab sessions (1 Mark each)`
+                  : "No lab sessions scheduled"
+              }
+              statusVariant={courseStat.labPercentage >= 75 ? "good" : "warning"}
+              icon={<CheckCircle2 className="w-5 h-5 text-tertiary-teal" />}
+            />
+            <StatCard
+              title="Statutory Buffer"
               value={
                 courseStat.canBunkFor75 > 0
                   ? `+${courseStat.canBunkFor75} Classes`
@@ -150,7 +162,120 @@ export default function StudentCourseDetailPage({
               icon={<Sparkles className="w-5 h-5 text-tertiary-teal" />}
             />
           </div>
-        </>
+
+          {/* Theory vs Lab Detailed Comparison Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Theory Breakdown Card */}
+            <Card className="p-6 space-y-4 bg-surface-lowest border border-border">
+              <div className="flex items-center justify-between pb-3 border-b border-surface-container">
+                <div className="flex items-center gap-2">
+                  <span className="p-1.5 rounded-lg bg-primary-fixed/40 text-primary">
+                    <BookOpen className="w-4 h-4" />
+                  </span>
+                  <div>
+                    <h3 className="text-sm font-bold text-on-surface">Theory Lecture Sessions</h3>
+                    <p className="text-[11px] text-on-surface-variant">
+                      Multi-hour lectures award 2 attendance; 1-hour lectures award 1 attendance.
+                    </p>
+                  </div>
+                </div>
+                <Badge variant={courseStat.theoryPercentage >= 75 ? "present" : "late"}>
+                  {courseStat.theoryPercentage.toFixed(1)}%
+                </Badge>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3 text-center">
+                <div className="p-3 rounded-xl bg-surface-low/80 border border-surface-container">
+                  <span className="text-[10px] uppercase font-bold text-on-surface-variant block">Conducted</span>
+                  <span className="text-lg font-bold text-on-surface font-mono">{courseStat.theoryConducted}</span>
+                  <span className="text-[10px] text-on-surface-variant block">Units</span>
+                </div>
+                <div className="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200">
+                  <span className="text-[10px] uppercase font-bold text-emerald-800 block">Attended</span>
+                  <span className="text-lg font-bold text-emerald-950 font-mono">{courseStat.theoryAttended}</span>
+                  <span className="text-[10px] text-emerald-700 block">Units</span>
+                </div>
+                <div className="p-3 rounded-xl bg-rose-50/70 border border-rose-200">
+                  <span className="text-[10px] uppercase font-bold text-rose-800 block">Absent</span>
+                  <span className="text-lg font-bold text-rose-950 font-mono">{courseStat.theoryAbsent}</span>
+                  <span className="text-[10px] text-rose-700 block">Units</span>
+                </div>
+              </div>
+
+              <div className="space-y-1.5 pt-1">
+                <div className="flex justify-between text-xs text-on-surface-variant">
+                  <span>Theory Attendance Progress</span>
+                  <span className="font-bold text-on-surface">{courseStat.theoryPercentage.toFixed(1)}%</span>
+                </div>
+                <div className="w-full bg-surface-container rounded-full h-2 overflow-hidden">
+                  <div
+                    className="h-full bg-primary rounded-full transition-all"
+                    style={{ width: `${Math.min(100, courseStat.theoryPercentage)}%` }}
+                  />
+                </div>
+              </div>
+            </Card>
+
+            {/* Practical / Lab Breakdown Card */}
+            <Card className="p-6 space-y-4 bg-surface-lowest border border-border">
+              <div className="flex items-center justify-between pb-3 border-b border-surface-container">
+                <div className="flex items-center gap-2">
+                  <span className="p-1.5 rounded-lg bg-tertiary-fixed/40 text-tertiary-teal">
+                    <CheckCircle2 className="w-4 h-4" />
+                  </span>
+                  <div>
+                    <h3 className="text-sm font-bold text-on-surface">Practical / Laboratory Sessions</h3>
+                    <p className="text-[11px] text-on-surface-variant">
+                      Tracked per lab session (1 attendance counted, no hour multiplier).
+                    </p>
+                  </div>
+                </div>
+                <Badge variant={courseStat.labPercentage >= 75 ? "present" : "late"}>
+                  {courseStat.labConducted > 0 ? `${courseStat.labPercentage.toFixed(1)}%` : "N/A"}
+                </Badge>
+              </div>
+
+              {courseStat.labConducted > 0 ? (
+                <>
+                  <div className="grid grid-cols-3 gap-3 text-center">
+                    <div className="p-3 rounded-xl bg-surface-low/80 border border-surface-container">
+                      <span className="text-[10px] uppercase font-bold text-on-surface-variant block">Conducted</span>
+                      <span className="text-lg font-bold text-on-surface font-mono">{courseStat.labConducted}</span>
+                      <span className="text-[10px] text-on-surface-variant block">Labs (1 Attendance)</span>
+                    </div>
+                    <div className="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200">
+                      <span className="text-[10px] uppercase font-bold text-emerald-800 block">Attended</span>
+                      <span className="text-lg font-bold text-emerald-950 font-mono">{courseStat.labAttended}</span>
+                      <span className="text-[10px] text-emerald-700 block">Labs</span>
+                    </div>
+                    <div className="p-3 rounded-xl bg-rose-50/70 border border-rose-200">
+                      <span className="text-[10px] uppercase font-bold text-rose-800 block">Absent</span>
+                      <span className="text-lg font-bold text-rose-950 font-mono">{courseStat.labAbsent}</span>
+                      <span className="text-[10px] text-rose-700 block">Labs</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5 pt-1">
+                    <div className="flex justify-between text-xs text-on-surface-variant">
+                      <span>Lab Attendance Progress</span>
+                      <span className="font-bold text-on-surface">{courseStat.labPercentage.toFixed(1)}%</span>
+                    </div>
+                    <div className="w-full bg-surface-container rounded-full h-2 overflow-hidden">
+                      <div
+                        className="h-full bg-tertiary-teal rounded-full transition-all"
+                        style={{ width: `${Math.min(100, courseStat.labPercentage)}%` }}
+                      />
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="p-8 text-center text-xs text-on-surface-variant bg-surface-low/30 rounded-xl border border-dashed border-border">
+                  No laboratory practical sessions scheduled for this course.
+                </div>
+              )}
+            </Card>
+          </div>
+        </div>
       )}
 
       {activeTab === "marks" && (

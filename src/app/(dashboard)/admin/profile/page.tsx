@@ -92,7 +92,7 @@ export default function AdminProfilePage() {
                 </Badge>
               </div>
               <p className="text-xs font-mono text-primary font-bold">
-                Employee ID: ADM-UOH-102 • Dean's Office
+                Employee ID: ADM-UOH-102 • Dean&apos;s Office
               </p>
               <p className="text-xs text-on-surface-variant">
                 {currentAdmin.department}
@@ -173,7 +173,7 @@ export default function AdminProfilePage() {
                   Designation
                 </span>
                 <p className="font-semibold text-on-surface">Academic Dean & Head Administrator</p>
-                <span className="text-[11px] text-outline">Dean's Academic Affairs Committee</span>
+                <span className="text-[11px] text-outline">Dean&apos;s Academic Affairs Committee</span>
               </div>
 
               <div className="p-4 rounded-xl bg-surface-low space-y-1">

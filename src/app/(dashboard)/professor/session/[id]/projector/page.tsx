@@ -34,9 +34,10 @@ export default function ClassModeProjectorPage({
 
   const records = currentSession?.records || [];
   const presentCount = records.filter(
-    (r) => r.status === "PRESENT" || r.status === "LATE"
+    (r) => r.status === "PRESENT"
   ).length;
   const totalCount = records.length;
+  const sessionHours = currentSession?.hours || 1;
 
   if (!currentSession) return null;
 
@@ -52,9 +53,14 @@ export default function ClassModeProjectorPage({
             </button>
           </Link>
           <div>
-            <span className="text-xs font-bold uppercase tracking-widest text-[#4CADAB]">
-              {currentSession.program} • Semester {currentSession.semester}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold uppercase tracking-widest text-[#4CADAB]">
+                {currentSession.program} • Semester {currentSession.semester}
+              </span>
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#4CADAB]/20 text-[#4CADAB] border border-[#4CADAB]/40">
+                ⚡ {sessionHours} {sessionHours === 1 ? "Hour (1 Attendance)" : "Hours (2 Attendance)"}
+              </span>
+            </div>
             <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white mt-0.5">
               {currentSession.courseName}
             </h1>

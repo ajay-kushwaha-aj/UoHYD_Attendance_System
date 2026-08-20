@@ -15,7 +15,7 @@ export function getAttendanceStatus(percentage: number, thresholds = { min: 75, 
   return "critical";
 }
 
-export function getStatusColor(status: "PRESENT" | "ABSENT" | "LATE" | "good" | "warning" | "critical") {
+export function getStatusColor(status: "PRESENT" | "ABSENT" | "good" | "warning" | "critical") {
   switch (status) {
     case "PRESENT":
     case "good":
@@ -27,15 +27,14 @@ export function getStatusColor(status: "PRESENT" | "ABSENT" | "LATE" | "good" | 
         border: "border-attendance-present-border",
         label: "Present",
       };
-    case "LATE":
     case "warning":
       return {
-        bg: "bg-attendance-late-bg",
-        badge: "bg-attendance-late-badge text-attendance-late-text border-attendance-late-border",
-        text: "text-attendance-late-text",
-        dot: "bg-attendance-late-dot",
-        border: "border-attendance-late-border",
-        label: "Late",
+        bg: "bg-amber-50",
+        badge: "bg-amber-100 text-amber-800 border-amber-300",
+        text: "text-amber-700",
+        dot: "bg-amber-500",
+        border: "border-amber-300",
+        label: "Attention Needed",
       };
     case "ABSENT":
     case "critical":

@@ -78,8 +78,134 @@
   }
 }
 
+@keyframes indeterminate {
+  0% {
+    transform: translateX(-100%) scaleX(0.2);
+  }
+  50% {
+    transform: translateX(0%) scaleX(0.7);
+  }
+  100% {
+    transform: translateX(100%) scaleX(0.2);
+  }
+}
+
 .animate-shimmer {
   background: linear-gradient(90deg, #f1f4f6 25%, #e5e9eb 50%, #f1f4f6 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }
+
+.animate-indeterminate {
+  animation: indeterminate 1.8s infinite cubic-bezier(0.65, 0.815, 0.735, 0.395);
+  transform-origin: left center;
+}
+
+/* ==========================================================================
+   OFFICIAL UNIVERSITY A4 DOCUMENT PRINT ENGINE STYLES
+   ========================================================================== */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 10mm 12mm 10mm 12mm;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    font-size: 11pt !important;
+  }
+
+  /* Hide entire application navigation chrome during print */
+  aside,
+  header,
+  nav,
+  [role="navigation"],
+  .sidebar,
+  .header,
+  .mobile-nav,
+  .command-palette,
+  button,
+  .no-print,
+  .print\:hidden {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Unconstrain dashboard wrapper and main container */
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    display: block !important;
+  }
+
+  .min-h-screen,
+  .max-w-container,
+  .space-y-6,
+  .space-y-8 {
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    display: block !important;
+  }
+
+  /* Printable Report Container resets */
+  .a4-print-sheet {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+    display: block !important;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+  }
+
+  /* Tables and Row Break Prevention */
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    page-break-inside: auto !important;
+  }
+
+  tr,
+  td,
+  th {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  thead {
+    display: table-header-group !important;
+  }
+
+  tfoot {
+    display: table-footer-group !important;
+  }
+
+  .break-inside-avoid {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+}
+

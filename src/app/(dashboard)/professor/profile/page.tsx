@@ -209,7 +209,7 @@ export default function ProfessorProfilePage() {
                   Student Consultation Hours
                 </span>
                 <p className="font-semibold text-on-surface">{officeHours}</p>
-                <span className="text-[11px] text-outline">Appointments via Dean's Office</span>
+                <span className="text-[11px] text-outline">Appointments via Dean&apos;s Office</span>
               </div>
             </div>
 

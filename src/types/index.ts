@@ -1,6 +1,6 @@
 export type UserRole = "student" | "professor" | "admin";
 
-export type AttendanceStatus = "PRESENT" | "ABSENT" | "LATE";
+export type AttendanceStatus = "PRESENT" | "ABSENT";
 
 export interface Profile {
   id: string;
@@ -58,6 +58,11 @@ export interface TimeTableSlot {
   endTime: string; // e.g. "11:30 AM"
   room: string; // e.g. "LH-204"
   sessionType?: "LECTURE" | "LAB" | "TUTORIAL" | "SEMINAR";
+  hours?: number; // 1 or 2 hours (1 hr = 1 class, 2 hrs = 2 classes)
+  isCancelled?: boolean;
+  cancelReason?: string;
+  cancelledBy?: string;
+  cancelledAt?: string;
 }
 
 export interface Course {
@@ -168,14 +173,38 @@ export interface AttendanceSession {
   date: string;
   startTime: string;
   endTime: string;
+  hours: number; // For Theory: 1 hr = 1 class/mark, 2 hrs = 2 classes/marks. For Lab: 1 mark regardless of hours.
+  sessionCategory?: "THEORY" | "LAB"; // Explicit category
   sessionType: "MANUAL" | "QR" | "CODE";
-  status: "ACTIVE" | "LOCKED" | "ARCHIVED";
+  status: "ACTIVE" | "LOCKED" | "ARCHIVED" | "CANCELLED";
   qrToken?: string;
   attendanceCode?: string;
   expiresAt?: string;
   createdAt: string;
   lockedAt?: string;
+  isCancelled?: boolean;
+  cancelReason?: string;
+  cancelledBy?: string;
+  cancelledAt?: string;
   records: AttendanceRecord[];
+}
+
+export interface CancelledClassRecord {
+  id: string;
+  courseId: string;
+  courseCode: string;
+  courseName: string;
+  slotId?: string;
+  sessionId?: string;
+  date: string;
+  day: string;
+  time: string;
+  room: string;
+  professorId: string;
+  professorName: string;
+  reason: string;
+  additionalRemarks?: string;
+  cancelledAt: string;
 }
 
 export interface StudentCourseAttendance {
@@ -184,11 +213,24 @@ export interface StudentCourseAttendance {
   courseName: string;
   professorName: string;
   credits: number;
-  conductedClasses: number;
-  attendedClasses: number;
-  absentClasses: number;
-  lateClasses: number;
-  percentage: number;
+  
+  // Theory Lecture Breakdown
+  theoryConducted: number;
+  theoryAttended: number;
+  theoryAbsent: number;
+  theoryPercentage: number;
+
+  // Practical / Lab Breakdown
+  labConducted: number;
+  labAttended: number;
+  labAbsent: number;
+  labPercentage: number;
+
+  // Overall Combined
+  conductedClasses: number; // Total units conducted (Theory units + Lab units)
+  attendedClasses: number;  // Total units attended (Theory units + Lab units)
+  absentClasses: number;    // Total units absent
+  percentage: number;       // Overall percentage
   status: "good" | "warning" | "critical";
   requiredClassesFor75: number;
   canBunkFor75: number;
@@ -209,3 +251,60 @@ export interface AuditLog {
   reason: string;
   timestamp: string;
 }
+
+export type NotificationType = "INFO" | "SUCCESS" | "WARNING" | "CANCELLATION" | "ACADEMIC" | "GRIEVANCE";
+
+export interface AppNotification {
+  id: string;
+  title: string;
+  message: string;
+  type: NotificationType;
+  timestamp: string;
+  read: boolean;
+  targetRole?: "all" | "student" | "professor" | "admin";
+  link?: string;
+}
+
+export type GrievanceCategory =
+  | "ATTENDANCE_DISCREPANCY"
+  | "INTERNAL_MARKS"
+  | "TIMETABLE_CLASH"
+  | "MEDICAL_LEAVE"
+  | "GENERAL_QUERY";
+
+export type GrievanceStatus = "PENDING" | "UNDER_REVIEW" | "RESOLVED" | "REJECTED";
+
+export type GrievancePriority = "LOW" | "NORMAL" | "HIGH" | "URGENT";
+
+export interface GrievanceResponse {
+  id: string;
+  authorId: string;
+  authorName: string;
+  authorRole: UserRole;
+  message: string;
+  createdAt: string;
+}
+
+export interface StudentGrievance {
+  id: string;
+  ticketNumber: string;
+  studentId: string;
+  studentName: string;
+  studentRollNo: string;
+  studentEmail: string;
+  category: GrievanceCategory;
+  subject: string;
+  description: string;
+  courseId?: string;
+  courseCode?: string;
+  courseName?: string;
+  targetProfessorId?: string;
+  targetProfessorName?: string;
+  status: GrievanceStatus;
+  priority: GrievancePriority;
+  createdAt: string;
+  updatedAt: string;
+  resolutionNotes?: string;
+  responses: GrievanceResponse[];
+}
+

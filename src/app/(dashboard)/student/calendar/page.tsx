@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 const WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 
 export default function StudentCalendarPage() {
-  const { courses } = useAttendance();
+  const { courses, cancelledClasses } = useAttendance();
 
   // Dynamically compute weekly schedule from active course timetable slots
   const days = WEEKDAYS.map((dayName) => {
@@ -19,6 +19,9 @@ export default function StudentCalendarPage() {
       time: string;
       room: string;
       sessionType?: string;
+      hours: number;
+      isCancelled: boolean;
+      cancellationRecord?: (typeof cancelledClasses)[0];
     }> = [];
 
     courses.forEach((course) => {
@@ -27,21 +30,39 @@ export default function StudentCalendarPage() {
           (s) => s.day.toLowerCase() === dayName.toLowerCase()
         );
         matchingSlots.forEach((slot) => {
+          const cancelRecord = cancelledClasses.find(
+            (c) =>
+              c.courseId === course.id &&
+              (c.slotId === slot.id || c.day.toLowerCase() === dayName.toLowerCase())
+          );
+
           dayClasses.push({
             course,
             time: `${slot.startTime} – ${slot.endTime}`,
             room: slot.room || course.room,
             sessionType: slot.sessionType || "LECTURE",
+            hours: slot.hours || 1,
+            isCancelled: Boolean(slot.isCancelled || cancelRecord),
+            cancellationRecord: cancelRecord,
           });
         });
       } else if (
         course.scheduleDays.some((d) => d.toLowerCase() === dayName.toLowerCase())
       ) {
+        const cancelRecord = cancelledClasses.find(
+          (c) =>
+            c.courseId === course.id &&
+            c.day.toLowerCase() === dayName.toLowerCase()
+        );
+
         dayClasses.push({
           course,
           time: course.scheduleTime,
           room: course.room,
           sessionType: "LECTURE",
+          hours: 1,
+          isCancelled: Boolean(cancelRecord),
+          cancellationRecord: cancelRecord,
         });
       }
     });
@@ -63,7 +84,7 @@ export default function StudentCalendarPage() {
             Weekly Timetable & Lecture Schedule
           </h1>
           <p className="text-xs text-on-surface-variant mt-0.5">
-            MSc Systems & Computational Biology • Semester 2
+            MSc Systems & Computational Biology • Semester 2 • Multi-hour lecture blocks count proportionally toward attendance marks.
           </p>
         </div>
 
@@ -85,18 +106,54 @@ export default function StudentCalendarPage() {
             <div className="space-y-2.5">
               {d.classes.length > 0 ? (
                 d.classes.map((cls, idx) => (
-                  <Card key={idx} className="p-3.5 space-y-2 hover:border-outline transition-colors text-xs border border-border">
+                  <Card
+                    key={idx}
+                    className={`p-3.5 space-y-2 transition-colors text-xs border ${
+                      cls.isCancelled
+                        ? "bg-rose-50/40 border-rose-200"
+                        : "bg-surface-lowest border-border hover:border-outline"
+                    }`}
+                  >
                     <div className="flex items-center justify-between">
-                      <span className="font-mono font-bold text-[10px] text-primary-container bg-surface-container px-1.5 py-0.5 rounded">
+                      <span
+                        className={`font-mono font-bold text-[10px] px-1.5 py-0.5 rounded ${
+                          cls.isCancelled
+                            ? "bg-rose-200/80 text-rose-900"
+                            : "bg-surface-container text-primary-container"
+                        }`}
+                      >
                         {cls.course.code}
                       </span>
-                      {cls.sessionType && (
-                        <span className="text-[9px] uppercase font-bold text-outline">
-                          {cls.sessionType}
-                        </span>
-                      )}
+                      <div className="flex items-center gap-1">
+                        {cls.isCancelled ? (
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-rose-100 text-rose-800 border border-rose-300">
+                            CANCELLED
+                          </span>
+                        ) : (
+                          <>
+                            {cls.sessionType && (
+                              <span className="text-[9px] uppercase font-bold text-outline">
+                                {cls.sessionType}
+                              </span>
+                            )}
+                            {cls.sessionType === "LAB" ? (
+                              <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-teal-50 text-teal-800 border border-teal-200">
+                                Lab (1 Attendance)
+                              </span>
+                            ) : (
+                              <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                {cls.hours} {cls.hours === 1 ? "Hr (1 Attendance)" : "Hrs (2 Attendance)"}
+                              </span>
+                            )}
+                          </>
+                        )}
+                      </div>
                     </div>
-                    <h4 className="font-semibold text-on-surface line-clamp-2">
+                    <h4
+                      className={`font-semibold line-clamp-2 ${
+                        cls.isCancelled ? "text-rose-950 line-through opacity-80" : "text-on-surface"
+                      }`}
+                    >
                       {cls.course.name}
                     </h4>
                     <div className="text-[11px] text-on-surface-variant space-y-1 pt-1 border-t border-surface-container">
@@ -109,6 +166,18 @@ export default function StudentCalendarPage() {
                         <span className="truncate">{cls.room}</span>
                       </div>
                     </div>
+
+                    {cls.isCancelled && (
+                      <div className="pt-2 border-t border-rose-200 text-[10.5px] text-rose-900 space-y-0.5 bg-rose-100/60 p-2 rounded-lg border border-rose-200">
+                        <p className="font-bold text-rose-800">Cancelled by Instructor:</p>
+                        <p className="italic">{cls.cancellationRecord?.reason || "Official Faculty Duty / Notice"}</p>
+                        {cls.cancellationRecord?.additionalRemarks && (
+                          <p className="text-[10px] text-rose-800 font-medium">
+                            Note: {cls.cancellationRecord.additionalRemarks}
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </Card>
                 ))
               ) : (

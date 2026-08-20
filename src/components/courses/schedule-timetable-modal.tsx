@@ -261,15 +261,28 @@ export function ScheduleTimetableModal({
                     </FormField>
                   </div>
 
-                  <FormField label="Specific Classroom / Lab Venue">
-                    <Input
-                      type="text"
-                      placeholder={`e.g. ${primaryRoom} or Bioinformatics Lab-1`}
-                      value={slot.room || ""}
-                      onChange={(e) => handleUpdateSlot(slot.id, "room", e.target.value)}
-                      className="text-xs"
-                    />
-                  </FormField>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <FormField label="Classroom / Lab Venue">
+                      <Input
+                        type="text"
+                        placeholder={`e.g. ${primaryRoom} or Bioinformatics Lab-1`}
+                        value={slot.room || ""}
+                        onChange={(e) => handleUpdateSlot(slot.id, "room", e.target.value)}
+                        className="text-xs"
+                      />
+                    </FormField>
+
+                    <FormField label="Class Duration & Attendance Credits">
+                      <select
+                        value={slot.hours || 1}
+                        onChange={(e) => handleUpdateSlot(slot.id, "hours", parseInt(e.target.value, 10))}
+                        className="w-full h-10 rounded-xl border border-indigo-300 bg-indigo-50/50 px-3 text-xs font-bold text-indigo-900 shadow-xs focus:outline-none focus:ring-3 focus:ring-indigo-300/30 transition-all"
+                      >
+                        <option value={1}>1 Hour Session = 1 Attendance Mark</option>
+                        <option value={2}>2 Hours Session = 2 Attendance Marks (2 Classes)</option>
+                      </select>
+                    </FormField>
+                  </div>
                 </div>
               ))}
             </div>
