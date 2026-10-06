@@ -230,7 +230,7 @@ export default function AdminDepartmentsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#8B1D1D]/10 text-[#8B1D1D] text-[11px] font-bold uppercase tracking-wider">
-            Dean's Academic Registry
+            Dean&apos;s Academic Registry
           </div>
           <h1 className="text-xl md:text-2xl font-bold text-slate-900 tracking-tight mt-1">
             University Departments & Academic Hierarchy
