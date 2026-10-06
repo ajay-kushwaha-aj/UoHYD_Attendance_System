@@ -1,6 +1,7 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
+  darkMode: "class",
   content: [
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
@@ -8,6 +9,14 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      fontSize: {
+        xs: ["0.84rem", { lineHeight: "1.3rem" }], // ~13.5px
+        sm: ["0.95rem", { lineHeight: "1.45rem" }], // ~15.2px
+        base: ["1.0625rem", { lineHeight: "1.65rem" }], // 17px
+        lg: ["1.2rem", { lineHeight: "1.75rem" }], // 19.2px
+        xl: ["1.35rem", { lineHeight: "1.95rem" }], // 21.6px
+        "2xl": ["1.65rem", { lineHeight: "2.2rem" }],
+      },
       colors: {
         background: "#f7fafc",
         "on-background": "#181c1e",

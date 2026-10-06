@@ -19,7 +19,7 @@ export interface StudentProfile extends Profile {
   program: string;
   batchId: string;
   batchName: string;
-  section: string; // "A" | "B"
+  section?: string;
   semester: number;
 }
 
@@ -38,6 +38,23 @@ export interface AdminProfile extends Profile {
   department: string;
 }
 
+export interface Department {
+  id: string;
+  code: string; // e.g. "SCB"
+  name: string; // e.g. "Department of Systems & Computational Biology"
+  school: string; // e.g. "School of Life Sciences"
+  hodName: string; // e.g. "Prof. K. Venkatesh Rao"
+  hodEmail: string; // e.g. "dr.rao@uohyd.ac.in"
+  officeLocation: string; // e.g. "SLS Building, 2nd Floor, Room 204"
+  contactPhone?: string; // e.g. "+91 40 2313 4500"
+  establishedYear: number;
+  programs: string[];
+  totalFaculty: number;
+  totalStudents: number;
+  status: "ACTIVE" | "INACTIVE";
+  description?: string;
+}
+
 export interface Batch {
   id: string;
   name: string; // e.g. "MSc SCB 2025–27"
@@ -46,7 +63,7 @@ export interface Batch {
   startYear: number;
   endYear: number;
   currentSemester: number;
-  sections: string[]; // ["Section A", "Section B"]
+  sections?: string[];
   isActive: boolean;
   totalStudents: number;
 }
@@ -98,7 +115,7 @@ export interface AssessmentScheme {
   id: string;
   courseId: string;
   batchId: string;
-  section: string;
+  section?: string;
   totalMaxMarks: number; // e.g. 30 or 40
   components: AssessmentComponent[];
   passingMarks?: number;
@@ -112,7 +129,7 @@ export interface StudentInternalMark {
   courseId: string;
   courseCode: string;
   batchId: string;
-  section: string;
+  section?: string;
   studentId: string;
   studentRollNumber: string;
   studentName: string;
@@ -135,7 +152,7 @@ export interface MarkAuditLog {
   courseId: string;
   courseCode: string;
   batchId: string;
-  section: string;
+  section?: string;
   componentName: string;
   oldScore: number | null;
   newScore: number;
@@ -164,7 +181,7 @@ export interface AttendanceSession {
   courseName: string;
   batchId: string;
   batchName: string;
-  section: string;
+  section?: string;
   professorId: string;
   professorName: string;
   program: string;

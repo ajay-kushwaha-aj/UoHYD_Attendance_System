@@ -47,9 +47,7 @@ export default function ProfessorCourseWorkspacePage({
     courses,
     batches,
     selectedBatchId,
-    selectedSection,
     setSelectedBatchId,
-    setSelectedSection,
     currentProfessor,
     getScopedStudents,
     getCourseAssessmentScheme,
@@ -69,10 +67,10 @@ export default function ProfessorCourseWorkspacePage({
 
   const course = courses.find((c) => c.id === params.id) || courses[0];
   const activeBatch = batches.find((b) => b.id === selectedBatchId) || batches[0];
-  const scopedStudents = getScopedStudents(selectedBatchId, selectedSection);
-  const scheme = getCourseAssessmentScheme(course.id, selectedBatchId, selectedSection);
-  const marks = getCourseMarks(course.id, selectedBatchId, selectedSection);
-  const marksAnalytics = getMarksAnalytics(course.id, selectedBatchId, selectedSection);
+  const scopedStudents = getScopedStudents(selectedBatchId);
+  const scheme = getCourseAssessmentScheme(course.id, selectedBatchId);
+  const marks = getCourseMarks(course.id, selectedBatchId);
+  const marksAnalytics = getMarksAnalytics(course.id, selectedBatchId);
 
   const tabs: { id: WorkspaceTab; label: string; icon: any }[] = [
     { id: "overview", label: "Overview", icon: BookOpen },
@@ -135,20 +133,6 @@ export default function ProfessorCourseWorkspacePage({
             </select>
           </div>
 
-          <div className="flex flex-col">
-            <label className="text-[10px] font-bold uppercase tracking-wider text-outline mb-1">
-              Section
-            </label>
-            <select
-              value={selectedSection}
-              onChange={(e) => setSelectedSection(e.target.value)}
-              className="h-9 rounded-lg border border-outline-variant bg-surface px-3 text-xs text-on-surface font-semibold focus:outline-none focus:ring-2 focus:ring-tertiary-teal/30"
-            >
-              <option value="A">Section A</option>
-              <option value="B">Section B</option>
-            </select>
-          </div>
-
           <div className="pt-4 lg:pt-4">
             <Link href="/professor/session/sess-today-01">
               <Button variant="primary" size="default" className="shadow-sm font-bold gap-1.5">
@@ -179,7 +163,7 @@ export default function ProfessorCourseWorkspacePage({
         <StatCard
           title="Scoped Cohort"
           value={`${scopedStudents.length} Students`}
-          subtitle={`${activeBatch.name} (${selectedSection})`}
+          subtitle={activeBatch.name}
           icon={<Users className="w-5 h-5 text-tertiary-teal" />}
         />
         <StatCard
@@ -379,16 +363,12 @@ export default function ProfessorCourseWorkspacePage({
 
             <Card className="p-5 space-y-3">
               <h3 className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">
-                Batch & Section Scope
+                Batch Cohort Scope
               </h3>
               <div className="space-y-2 text-xs">
                 <div className="flex justify-between text-on-surface-variant">
                   <span>Batch:</span>
                   <span className="font-semibold text-on-surface">{activeBatch.name}</span>
-                </div>
-                <div className="flex justify-between text-on-surface-variant">
-                  <span>Section:</span>
-                  <span className="font-semibold text-on-surface">Section {selectedSection}</span>
                 </div>
                 <div className="flex justify-between text-on-surface-variant">
                   <span>Enrolled:</span>
@@ -407,7 +387,7 @@ export default function ProfessorCourseWorkspacePage({
             <div className="p-4 border-b border-surface-container flex items-center justify-between">
               <div>
                 <h3 className="text-sm font-bold text-on-surface">
-                  Batch Attendance Summary — {activeBatch.name} ({selectedSection})
+                  Batch Attendance Summary — {activeBatch.name}
                 </h3>
                 <p className="text-xs text-on-surface-variant mt-0.5">
                   Conducted Lectures: <strong>26</strong> • Minimum Statutory Requirement: <strong>75%</strong>
@@ -476,13 +456,12 @@ export default function ProfessorCourseWorkspacePage({
           <MarksEntryTable
             courseId={course.id}
             batchId={selectedBatchId}
-            section={selectedSection}
             scheme={scheme}
             marks={marks}
             students={scopedStudents}
-            onSaveDraft={(updated) => saveDraftMarks(course.id, selectedBatchId, selectedSection, updated)}
-            onFinalize={() => finalizeMarks(course.id, selectedBatchId, selectedSection)}
-            onPublish={() => publishMarks(course.id, selectedBatchId, selectedSection)}
+            onSaveDraft={(updated) => saveDraftMarks(course.id, selectedBatchId, updated)}
+            onFinalize={() => finalizeMarks(course.id, selectedBatchId)}
+            onPublish={() => publishMarks(course.id, selectedBatchId)}
             onUpdateScheme={updateAssessmentScheme}
             onUpdateMarkScore={updateStudentMarkScore}
           />
@@ -498,7 +477,7 @@ export default function ProfessorCourseWorkspacePage({
                 Enrolled Cohort Roster ({scopedStudents.length} Students)
               </h3>
               <span className="text-xs text-on-surface-variant font-mono">
-                {activeBatch.name} • Section {selectedSection}
+                {activeBatch.name}
               </span>
             </div>
 
@@ -644,7 +623,6 @@ export default function ProfessorCourseWorkspacePage({
             reportType={selectedReportType}
             course={course}
             batch={activeBatch}
-            section={selectedSection}
             scheme={scheme}
             marks={marks}
             students={scopedStudents}

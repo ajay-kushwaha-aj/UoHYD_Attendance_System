@@ -36,7 +36,6 @@ export default function ProfessorDashboard() {
     activeSession,
     batches,
     selectedBatchId,
-    selectedSection,
     cancelledClasses,
     grievances,
     cancelScheduledClass,
@@ -126,7 +125,7 @@ export default function ProfessorDashboard() {
           <StatCard
             title="Active Cohort"
             value="16 Students"
-            subtitle={`${activeBatch.name} (Sec ${selectedSection})`}
+            subtitle={activeBatch.name}
             icon={<Users className="w-5 h-5 text-primary-container transition-transform group-hover:scale-110" />}
           />
         </Link>
@@ -159,7 +158,7 @@ export default function ProfessorDashboard() {
             <span>CURRENT LECTURE SESSION</span>
           </div>
           <span className="text-xs text-primary-fixed font-mono font-bold">
-            {todayCourse.code} • {activeBatch.name} ({selectedSection})
+            {todayCourse.code} • {activeBatch.name}
           </span>
         </div>
 

@@ -1,22 +1,29 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   GraduationCap,
   Briefcase,
   ShieldCheck,
   ArrowRight,
   Lock,
-  Mail,
   Eye,
   EyeOff,
   AlertCircle,
-  CheckCircle2,
-  Building2,
+  QrCode,
+  TrendingUp,
+  FileText,
+  Users,
+  Award,
+  FileCheck2,
+  Building,
+  KeyRound,
   Sparkles,
+  CheckCircle2,
+  BadgeCheck,
 } from "lucide-react";
-import Image from "next/image";
 import { useAuth, DEMO_ACCOUNTS } from "@/lib/auth-context";
 import { UserRole } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -26,19 +33,106 @@ import { FormField } from "@/components/ui/form-field";
 import { cn } from "@/lib/utils";
 
 export default function LoginPage() {
-  const { login, quickDemoLogin, isLoading } = useAuth();
+  const { login, isLoading } = useAuth();
 
-  const [activeRoleTab, setActiveRoleTab] = useState<UserRole>("professor");
-  const [email, setEmail] = useState<string>(DEMO_ACCOUNTS.professor.email);
-  const [password, setPassword] = useState<string>(DEMO_ACCOUNTS.professor.password);
+  const [activeRole, setActiveRole] = useState<UserRole>("student");
+  const [identifier, setIdentifier] = useState<string>("25mcms01");
+  const [password, setPassword] = useState<string>(DEMO_ACCOUNTS.student.password);
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [rememberMe, setRememberMe] = useState<boolean>(true);
   const [errorMessage, setErrorMessage] = useState<string>("");
 
-  const handleRoleTabChange = (role: UserRole) => {
-    setActiveRoleTab(role);
-    setEmail(DEMO_ACCOUNTS[role].email);
-    setPassword(DEMO_ACCOUNTS[role].password);
+  const roleConfigs = {
+    student: {
+      label: "Student",
+      icon: GraduationCap,
+      defaultPrefix: "25mcms01",
+      fieldLabel: "Student Roll Number (Format: 25MCMS01)",
+      placeholder: "25MCMS01",
+      buttonColor: "bg-blue-600 hover:bg-blue-700",
+      activeTabColor: "bg-blue-600 text-white shadow-xs",
+      demoName: "Ajay Kumar (25MCMS01)",
+      demoPrefix: "25mcms01",
+      demoPassword: DEMO_ACCOUNTS.student.password,
+      pills: [
+        { icon: QrCode, title: "QR Attendance", desc: "Scan in classroom", color: "blue" },
+        { icon: TrendingUp, title: "75% Target", desc: "Live percentage", color: "emerald" },
+        { icon: FileText, title: "Grievances", desc: "Track approvals", color: "amber" },
+      ],
+    },
+    professor: {
+      label: "Faculty / Professor",
+      icon: Briefcase,
+      defaultPrefix: "dr.rao",
+      fieldLabel: "Faculty Username or Employee Code",
+      placeholder: "dr.rao or EMP-UOH-882",
+      buttonColor: "bg-emerald-700 hover:bg-emerald-800",
+      activeTabColor: "bg-emerald-700 text-white shadow-xs",
+      demoName: "Prof. K. V. Rao (HOD)",
+      demoPrefix: "dr.rao",
+      demoPassword: DEMO_ACCOUNTS.professor.password,
+      pills: [
+        { icon: QrCode, title: "Launch QR", desc: "Dynamic session", color: "emerald" },
+        { icon: Users, title: "Class Rosters", desc: "Batch & section", color: "blue" },
+        { icon: Award, title: "Internal Marks", desc: "Grading schemes", color: "purple" },
+      ],
+    },
+    admin: {
+      label: "Administrator",
+      icon: ShieldCheck,
+      defaultPrefix: "academic.admin",
+      fieldLabel: "Administrative Username or Email",
+      placeholder: "academic.admin",
+      buttonColor: "bg-indigo-700 hover:bg-indigo-800",
+      activeTabColor: "bg-indigo-700 text-white shadow-xs",
+      demoName: "Dr. S. R. Murthy (Dean)",
+      demoPrefix: "academic.admin",
+      demoPassword: DEMO_ACCOUNTS.admin.password,
+      pills: [
+        { icon: FileCheck2, title: "Audit Logs", desc: "Tamper-evident", color: "indigo" },
+        { icon: Building, title: "Departments", desc: "Configurations", color: "slate" },
+        { icon: KeyRound, title: "Permissions", desc: "Role security", color: "amber" },
+      ],
+    },
+  };
+
+  const currentConfig = roleConfigs[activeRole];
+
+  // Roll Number breakdown for Student role (Format: YY + 4 Alphabets + 2 Digits Serial -> e.g., 25MCMS01)
+  const rollBreakdown = useMemo(() => {
+    if (activeRole !== "student") return null;
+    const trimmed = identifier.trim().toUpperCase();
+    const match = trimmed.match(/^(\d{2})([A-Z]{4})(\d{2})$/);
+    if (match) {
+      return {
+        isValid: true,
+        year: `20${match[1]}`,
+        program: match[2],
+        serial: match[3],
+        fullRoll: trimmed,
+      };
+    }
+    return null;
+  }, [activeRole, identifier]);
+
+  const handleRoleChange = (role: UserRole) => {
+    setActiveRole(role);
+    setIdentifier(roleConfigs[role].defaultPrefix);
+    setPassword(roleConfigs[role].demoPassword);
+    setErrorMessage("");
+  };
+
+  const handleIdentifierChange = (val: string) => {
+    let clean = val.trim();
+    if (clean.toLowerCase().endsWith("@uohyd.ac.in")) {
+      clean = clean.slice(0, -"@uohyd.ac.in".length);
+    }
+    setIdentifier(clean);
+  };
+
+  const handleFillDemo = () => {
+    setIdentifier(currentConfig.demoPrefix);
+    setPassword(currentConfig.demoPassword);
     setErrorMessage("");
   };
 
@@ -46,135 +140,167 @@ export default function LoginPage() {
     e.preventDefault();
     setErrorMessage("");
 
-    if (!email.trim() || !password.trim()) {
-      setErrorMessage("Please enter your institutional email and password.");
+    const clean = identifier.trim();
+    if (!clean || !password.trim()) {
+      setErrorMessage("Please enter your institutional ID/username and password.");
       return;
     }
 
-    const res = await login(email, password, activeRoleTab);
+    const fullVal = clean.toUpperCase().startsWith("EMP-")
+      ? clean
+      : `${clean.toLowerCase()}@uohyd.ac.in`;
+
+    const res = await login(fullVal, password, activeRole);
     if (!res.success && res.error) {
       setErrorMessage(res.error);
     }
   };
 
-  const roleTabItems: { role: UserRole; label: string; icon: typeof GraduationCap; desc: string }[] = [
-    {
-      role: "student",
-      label: "Student",
-      icon: GraduationCap,
-      desc: "QR Attendance & Course Analytics",
-    },
-    {
-      role: "professor",
-      label: "Faculty / Professor",
-      icon: Briefcase,
-      desc: "Live Sessions, QR & Reports",
-    },
-    {
-      role: "admin",
-      label: "Administrator",
-      icon: ShieldCheck,
-      desc: "Audits & Department Controls",
-    },
-  ];
-
   return (
-    <div className="min-h-screen bg-background flex flex-col justify-center items-center p-4 sm:p-6 lg:p-8">
-      {/* Background Subtle Accent Pattern */}
-      <div className="fixed inset-0 pointer-events-none opacity-40 bg-[radial-gradient(#d6e3ff_1px,transparent_1px)] [background-size:24px_24px]" />
+    <div className="min-h-screen bg-slate-50 flex flex-col justify-center items-center p-4 sm:p-6 lg:p-8">
+      {/* Subtle Accent Dot Pattern */}
+      <div className="fixed inset-0 pointer-events-none opacity-40 bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] [background-size:20px_20px]" />
 
-      <div className="w-full max-w-xl space-y-6 relative z-10 animate-in fade-in zoom-in-95 duration-200">
-        {/* University Brand Header */}
-        <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6 bg-surface-lowest p-5 sm:p-6 rounded-3xl border border-border shadow-elevation-1">
-            <div className="relative h-28 w-28 sm:h-32 sm:w-32 shrink-0 flex items-center justify-center">
-              <Image
-                src="/uohyd-logo.png"
-                alt="University of Hyderabad Logo"
-                width={128}
-                height={128}
-                className="object-contain w-full h-full drop-shadow-sm"
-                priority
-              />
+      <div className="w-full max-w-xl space-y-5 relative z-10 animate-in fade-in zoom-in-95 duration-200">
+        {/* University Header */}
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6 bg-white p-5 sm:p-6 rounded-3xl border border-slate-200 shadow-sm">
+          <div className="relative h-24 w-24 sm:h-28 sm:w-28 shrink-0 flex items-center justify-center">
+            <Image
+              src="/uohyd-logo.png"
+              alt="University of Hyderabad Logo"
+              width={112}
+              height={112}
+              className="object-contain w-full h-full drop-shadow-xs"
+              priority
+            />
+          </div>
+          <div className="text-center sm:text-left space-y-1 select-none">
+            <div className="text-base sm:text-lg font-telugu font-bold text-[#8B1D1D] leading-tight">
+              హైదరాబాదు విశ్వవిద్యాలయం
             </div>
-            <div className="text-center sm:text-left space-y-1 select-none">
-              <div className="text-lg sm:text-xl md:text-2xl font-telugu font-bold text-[#8B1D1D] leading-tight">
-                హైదరాబాదు విశ్వవిద్యాలయం
-              </div>
-              <div className="text-lg sm:text-xl md:text-2xl font-hindi font-bold text-[#8B1D1D] leading-tight">
-                हैदराबाद विश्वविद्यालय
-              </div>
-              <h1 className="text-xl sm:text-2xl md:text-3xl font-sans font-black text-[#8B1D1D] tracking-tight leading-tight">
-                University of Hyderabad
-              </h1>
-              <div className="pt-1.5 flex flex-wrap items-center justify-center sm:justify-start gap-2 text-xs">
-                <span className="inline-block bg-primary/10 px-2.5 py-0.5 rounded-md font-bold text-primary text-[11px] uppercase tracking-wider">
-                  Attendance & Academic Portal
-                </span>
-                <span className="text-[11px] text-on-surface-variant font-medium">
-                  School of Life Sciences
-                </span>
-              </div>
+            <div className="text-base sm:text-lg font-hindi font-bold text-[#8B1D1D] leading-tight">
+              हैदराबाद विश्वविद्यालय
+            </div>
+            <h1 className="text-xl sm:text-2xl font-sans font-black text-[#8B1D1D] tracking-tight leading-tight">
+              University of Hyderabad
+            </h1>
+            <div className="pt-1 flex flex-wrap items-center justify-center sm:justify-start gap-2">
+              <span className="bg-[#8B1D1D] text-white px-2.5 py-0.5 rounded text-[11px] font-bold uppercase tracking-wider shadow-xs">
+                Attendance & Academic Portal
+              </span>
+              <span className="text-xs text-slate-600 font-medium">
+                School of Life Sciences
+              </span>
             </div>
           </div>
         </div>
 
         {/* Main Authentication Card */}
-        <Card className="p-6 sm:p-8 shadow-elevation-2 border border-border bg-surface-lowest">
-          {/* Role Switcher Tabs */}
+        <Card className="p-6 sm:p-8 shadow-sm border border-slate-200 bg-white rounded-3xl">
+          {/* Institutional Role Selector Tabs */}
           <div className="space-y-2 mb-6">
-            <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant">
-              Select Your Institutional Role
-            </label>
-            <div className="grid grid-cols-3 gap-2 bg-surface-container p-1.5 rounded-xl border border-border/60">
-              {roleTabItems.map((item) => {
-                const Icon = item.icon;
-                const isSelected = activeRoleTab === item.role;
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                Select Your Institutional Role
+              </label>
+              <span className="text-[11px] font-semibold text-slate-500">
+                Active Portal: <strong className="text-slate-800 capitalize">{activeRole}</strong>
+              </span>
+            </div>
+            <div className="grid grid-cols-3 gap-2 bg-slate-100 p-1.5 rounded-2xl border border-slate-200/80">
+              {(["student", "professor", "admin"] as UserRole[]).map((roleKey) => {
+                const conf = roleConfigs[roleKey];
+                const Icon = conf.icon;
+                const isSelected = activeRole === roleKey;
                 return (
                   <button
-                    key={item.role}
+                    key={roleKey}
                     type="button"
-                    onClick={() => handleRoleTabChange(item.role)}
+                    onClick={() => handleRoleChange(roleKey)}
                     className={cn(
-                      "flex flex-col items-center justify-center py-2.5 px-2 rounded-lg text-xs font-semibold transition-all duration-150 gap-1",
+                      "flex flex-col sm:flex-row items-center justify-center py-2.5 px-3 rounded-xl text-xs font-bold transition-all duration-150 gap-1.5 cursor-pointer",
                       isSelected
-                        ? "bg-primary text-white shadow-sm font-bold scale-[1.02]"
-                        : "text-on-surface-variant hover:text-on-surface hover:bg-surface-low"
+                        ? conf.activeTabColor
+                        : "text-slate-600 hover:text-slate-900 hover:bg-white/70"
                     )}
                   >
-                    <Icon className="w-4 h-4" />
-                    <span>{item.label}</span>
+                    <Icon className="w-4 h-4 shrink-0" />
+                    <span>{conf.label}</span>
                   </button>
                 );
               })}
             </div>
           </div>
 
+          {/* Dynamic Role Feature Pills */}
+          <div className="grid grid-cols-3 gap-2.5 mb-6">
+            {currentConfig.pills.map((pill, idx) => {
+              const Icon = pill.icon;
+              return (
+                <div
+                  key={idx}
+                  className="flex flex-col items-center p-3 rounded-2xl bg-slate-50 border border-slate-200 text-center transition-all hover:bg-slate-100/70"
+                >
+                  <Icon className="w-4 h-4 text-[#8B1D1D] mb-1" />
+                  <span className="text-[11px] font-bold text-slate-900">{pill.title}</span>
+                  <span className="text-[10px] text-slate-500 font-medium">{pill.desc}</span>
+                </div>
+              );
+            })}
+          </div>
+
           {/* Error Banner */}
           {errorMessage && (
-            <div className="mb-6 p-3 rounded-lg bg-rose-50 border border-rose-200 text-xs text-rose-800 flex items-start gap-2 animate-in fade-in">
+            <div className="mb-6 p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 flex items-start gap-2 animate-in fade-in">
               <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-              <div className="leading-snug">{errorMessage}</div>
+              <div className="leading-snug font-medium">{errorMessage}</div>
             </div>
           )}
 
           {/* Login Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <FormField
-              label="Institutional Email Address"
+              label={currentConfig.fieldLabel}
               required
-              hint="Use your verified @uohyd.ac.in university ID"
+              hint={
+                activeRole === "student"
+                  ? "Enter Roll No. — @uohyd.ac.in is automatically appended"
+                  : "Enter institutional prefix — @uohyd.ac.in is automatically appended"
+              }
             >
               <Input
-                type="email"
-                placeholder="username@uohyd.ac.in"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                icon={<Mail className="w-4 h-4" />}
+                type="text"
+                placeholder={currentConfig.placeholder}
+                value={identifier}
+                onChange={(e) => handleIdentifierChange(e.target.value)}
+                suffix="@uohyd.ac.in"
                 required
-                className="bg-surface text-xs"
+                className={cn(
+                  "text-xs font-medium bg-white",
+                  activeRole === "student" && "uppercase tracking-wide"
+                )}
               />
             </FormField>
+
+            {/* Live Roll Format Preview Badge (For Students) */}
+            {activeRole === "student" && rollBreakdown && (
+              <div className="p-2.5 rounded-xl bg-blue-50 border border-blue-200 text-[11px] text-blue-900 flex items-center justify-between animate-in fade-in">
+                <div className="flex items-center gap-1.5 font-semibold">
+                  <BadgeCheck className="w-4 h-4 text-blue-600 shrink-0" />
+                  <span>Valid Roll Format:</span>
+                  <span className="font-mono text-blue-700 font-bold">
+                    {rollBreakdown.fullRoll}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-[10px] text-slate-600">
+                  <span>Batch: <strong className="text-slate-800">{rollBreakdown.year}</strong></span>
+                  <span>•</span>
+                  <span>Dept: <strong className="text-slate-800">{rollBreakdown.program}</strong></span>
+                  <span>•</span>
+                  <span>No: <strong className="text-slate-800">{rollBreakdown.serial}</strong></span>
+                </div>
+              </div>
+            )}
 
             <FormField
               label="Authentication Password"
@@ -182,7 +308,7 @@ export default function LoginPage() {
               badge={
                 <Link
                   href="/forgot-password"
-                  className="text-[10px] font-semibold text-primary hover:underline"
+                  className="text-[10px] font-semibold text-[#8B1D1D] hover:underline"
                 >
                   Forgot password?
                 </Link>
@@ -193,116 +319,74 @@ export default function LoginPage() {
                 placeholder="Enter your security password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                icon={<Lock className="w-4 h-4" />}
+                icon={<Lock className="w-4 h-4 text-slate-400" />}
                 rightElement={
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="p-1 rounded text-on-surface-variant hover:text-on-surface hover:bg-surface-low transition-colors"
+                    className="p-1 rounded text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
                   >
-                    {showPassword ? (
-                      <EyeOff className="w-4 h-4" />
-                    ) : (
-                      <Eye className="w-4 h-4" />
-                    )}
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 }
                 required
-                className="bg-surface text-xs"
+                className="text-xs bg-white"
               />
             </FormField>
 
             <div className="flex items-center justify-between pt-1">
-              <label className="flex items-center gap-2 text-xs text-on-surface-variant cursor-pointer select-none">
+              <label className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer select-none">
                 <input
                   type="checkbox"
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
-                  className="w-4 h-4 rounded border-border text-primary focus:ring-primary/20"
+                  className="w-4 h-4 rounded border-slate-300 text-[#8B1D1D] focus:ring-[#8B1D1D]/20 cursor-pointer"
                 />
-                <span className="font-medium">Remember terminal session</span>
+                <span className="font-medium">Stay logged in on this device</span>
               </label>
 
-              <span className="text-[11px] text-on-surface-variant">
-                Workspace: <strong className="capitalize text-primary font-bold">{activeRoleTab}</strong>
-              </span>
+              {identifier.trim() && (
+                <span className="text-[11px] text-slate-500 font-mono truncate max-w-[200px]">
+                  {identifier.trim().toLowerCase()}@uohyd.ac.in
+                </span>
+              )}
             </div>
 
             <Button
               type="submit"
-              variant="primary"
               size="lg"
-              className="w-full shadow-md bg-primary-container mt-2 font-bold h-11 text-xs tracking-wide"
+              className={cn(
+                "w-full shadow-sm text-white mt-2 font-bold h-11 text-xs tracking-wide transition-all",
+                currentConfig.buttonColor
+              )}
               isLoading={isLoading}
             >
-              Sign In to {activeRoleTab.toUpperCase()} Workspace
+              Sign In to {currentConfig.label.toUpperCase()} Workspace
               <ArrowRight className="w-4 h-4 ml-1.5" />
             </Button>
           </form>
 
-          {/* Quick Demo 1-Click Access Section */}
-          <div className="mt-8 pt-6 border-t border-surface-container space-y-3">
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-bold uppercase tracking-wider text-on-surface-variant flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-tertiary-teal" />
-                Quick 1-Click Demo Logins
-              </span>
-              <span className="text-[11px] text-outline">No typing needed</span>
+          {/* Quick 1-Click Demo Fill for the active role */}
+          <div className="mt-6 pt-5 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-1.5 text-slate-600 font-medium">
+              <Sparkles className="w-3.5 h-3.5 text-[#8B1D1D]" />
+              <span>Testing as {currentConfig.label}?</span>
             </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              <button
-                type="button"
-                onClick={() => quickDemoLogin("student")}
-                className="p-2.5 rounded-lg border border-border bg-surface hover:bg-surface-container text-left text-xs transition-all hover:border-primary group"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-primary">Student</span>
-                  <GraduationCap className="w-3.5 h-3.5 text-primary-container" />
-                </div>
-                <div className="text-[11px] text-on-surface-variant font-medium mt-0.5 truncate">
-                  Ajay Kumar
-                </div>
-                <div className="text-[10px] text-outline font-mono">23MCMS01</div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => quickDemoLogin("professor")}
-                className="p-2.5 rounded-lg border border-border bg-surface hover:bg-surface-container text-left text-xs transition-all hover:border-primary group"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-primary">Professor</span>
-                  <Briefcase className="w-3.5 h-3.5 text-primary-container" />
-                </div>
-                <div className="text-[11px] text-on-surface-variant font-medium mt-0.5 truncate">
-                  Prof. K. V. Rao
-                </div>
-                <div className="text-[10px] text-outline font-mono">HOD Life Sci</div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => quickDemoLogin("admin")}
-                className="p-2.5 rounded-lg border border-border bg-surface hover:bg-surface-container text-left text-xs transition-all hover:border-primary group"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-primary">Admin</span>
-                  <ShieldCheck className="w-3.5 h-3.5 text-primary-container" />
-                </div>
-                <div className="text-[11px] text-on-surface-variant font-medium mt-0.5 truncate">
-                  Dr. S. R. Murthy
-                </div>
-                <div className="text-[10px] text-outline font-mono">Dean Academic</div>
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={handleFillDemo}
+              className="px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-slate-800 font-bold hover:bg-slate-100 transition-colors flex items-center gap-1.5 text-xs cursor-pointer"
+            >
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+              Autofill {currentConfig.demoName}
+            </button>
           </div>
         </Card>
 
         {/* Footer info */}
-        <div className="text-center text-xs text-on-surface-variant space-y-1">
-          <p>University of Hyderabad Digital Classroom Infrastructure</p>
-          <p className="text-[11px] text-outline">
+        <div className="text-center text-xs text-slate-600 space-y-1">
+          <p className="font-medium">University of Hyderabad • School of Life Sciences</p>
+          <p className="text-[11px] text-slate-500">
             Protected by Institutional Row-Level Security & Role-Based Access Control
           </p>
         </div>

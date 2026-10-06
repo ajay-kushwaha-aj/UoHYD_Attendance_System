@@ -19,7 +19,7 @@ interface A4ReportPreviewProps {
   reportType: ReportType;
   course: Course;
   batch: Batch;
-  section: string;
+  section?: string;
   scheme: AssessmentScheme;
   marks: StudentInternalMark[];
   students: StudentProfile[];
@@ -32,7 +32,7 @@ export function A4ReportPreview({
   reportType,
   course,
   batch,
-  section,
+  section = "",
   scheme,
   marks,
   students,
@@ -56,14 +56,14 @@ export function A4ReportPreview({
   const getFilename = () => {
     const code = course.code.replace(/\s+/g, "_");
     const bName = batch.name.replace(/\s+/g, "-");
-    const sec = `Section-${section}`;
+    const secSuffix = section ? `_Sec-${section}` : "";
     switch (reportType) {
       case "INTERNAL_MARKS":
-        return `${code}_Internal_Marks_${bName}_${sec}.pdf`;
+        return `${code}_Internal_Marks_${bName}${secSuffix}.pdf`;
       case "ATTENDANCE":
-        return `${code}_Attendance_${bName}_${sec}.pdf`;
+        return `${code}_Attendance_${bName}${secSuffix}.pdf`;
       case "COMBINED_SUMMARY":
-        return `${code}_Academic_Summary_${bName}_${sec}.pdf`;
+        return `${code}_Academic_Summary_${bName}${secSuffix}.pdf`;
     }
   };
 
@@ -219,7 +219,7 @@ export function A4ReportPreview({
           <div>
             <span className="text-slate-600 font-semibold block text-[11px]">Academic Session & Semester:</span>
             <p className="font-bold text-slate-950 text-xs">
-              {batch.name} • Semester {course.semester} (Section {section})
+              {batch.name} • Semester {course.semester}
             </p>
           </div>
           <div>

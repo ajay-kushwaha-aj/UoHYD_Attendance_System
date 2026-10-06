@@ -30,7 +30,7 @@ import { ReasonModal } from "./reason-modal";
 interface MarksEntryTableProps {
   courseId: string;
   batchId: string;
-  section: string;
+  section?: string;
   scheme: AssessmentScheme;
   marks: StudentInternalMark[];
   students: StudentProfile[];
@@ -49,7 +49,7 @@ interface MarksEntryTableProps {
 export function MarksEntryTable({
   courseId,
   batchId,
-  section,
+  section = "",
   scheme,
   marks,
   students,

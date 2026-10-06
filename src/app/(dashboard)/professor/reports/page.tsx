@@ -21,9 +21,7 @@ export default function ProfessorReportsPage() {
     courses,
     batches,
     selectedBatchId,
-    selectedSection,
     setSelectedBatchId,
-    setSelectedSection,
     currentProfessor,
     getScopedStudents,
     getCourseAssessmentScheme,
@@ -35,9 +33,9 @@ export default function ProfessorReportsPage() {
 
   const courseObj = courses.find((c) => c.id === selectedCourseId) || courses[0];
   const activeBatch = batches.find((b) => b.id === selectedBatchId) || batches[0];
-  const scopedStudents = getScopedStudents(selectedBatchId, selectedSection);
-  const scheme = getCourseAssessmentScheme(courseObj.id, selectedBatchId, selectedSection);
-  const marks = getCourseMarks(courseObj.id, selectedBatchId, selectedSection);
+  const scopedStudents = getScopedStudents(selectedBatchId);
+  const scheme = getCourseAssessmentScheme(courseObj.id, selectedBatchId);
+  const marks = getCourseMarks(courseObj.id, selectedBatchId);
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
@@ -58,7 +56,7 @@ export default function ProfessorReportsPage() {
 
       {/* Filter and Scoping Bar (Hidden in Print) */}
       <Card className="p-4 bg-surface-lowest print:hidden">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label className="block text-[10px] font-bold uppercase tracking-wider text-outline mb-1">
               Select Course
@@ -95,20 +93,6 @@ export default function ProfessorReportsPage() {
 
           <div>
             <label className="block text-[10px] font-bold uppercase tracking-wider text-outline mb-1">
-              Select Section
-            </label>
-            <select
-              value={selectedSection}
-              onChange={(e) => setSelectedSection(e.target.value)}
-              className="w-full h-9 rounded-md border border-outline-variant bg-surface px-3 text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-tertiary-teal/30 font-semibold"
-            >
-              <option value="A">Section A</option>
-              <option value="B">Section B</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-outline mb-1">
               Document Format
             </label>
             <select
@@ -129,7 +113,6 @@ export default function ProfessorReportsPage() {
         reportType={selectedReportType}
         course={courseObj}
         batch={activeBatch}
-        section={selectedSection}
         scheme={scheme}
         marks={marks}
         students={scopedStudents}

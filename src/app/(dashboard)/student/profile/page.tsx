@@ -202,10 +202,10 @@ export default function StudentProfilePage() {
 
               <div className="p-4 rounded-xl bg-surface-low space-y-1">
                 <span className="text-[10px] uppercase font-bold text-on-surface-variant">
-                  Batch & Section Assignment
+                  Batch Cohort
                 </span>
                 <p className="font-semibold text-on-surface">
-                  {currentStudent.batchName} • Section {currentStudent.section}
+                  {currentStudent.batchName}
                 </p>
                 <span className="text-[11px] text-outline">Academic Cycle: 2025 – 2027</span>
               </div>

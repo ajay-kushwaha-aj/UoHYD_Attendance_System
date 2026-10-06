@@ -23,6 +23,7 @@ import {
   StudentGrievance,
   GrievanceStatus,
   GrievanceResponse,
+  Department,
 } from "@/types";
 import {
   MOCK_BATCHES,
@@ -38,6 +39,7 @@ import {
   MOCK_AUDIT_LOGS,
   MOCK_CANCELLED_CLASSES,
   MOCK_GRIEVANCES,
+  MOCK_DEPARTMENTS,
 } from "./mock-data";
 
 const STORAGE_KEYS = {
@@ -52,6 +54,7 @@ const STORAGE_KEYS = {
   CANCELLED_CLASSES: "uohyd_cancelled_classes_v1",
   NOTIFICATIONS: "uohyd_notifications_v1",
   GRIEVANCES: "uohyd_student_grievances_v1",
+  DEPARTMENTS: "uohyd_departments_v1",
   SELECTED_BATCH: "uohyd_selected_batch_id",
   SELECTED_SECTION: "uohyd_selected_section",
 };
@@ -152,6 +155,10 @@ interface AttendanceContextType {
   enrollStudent: (studentData: Omit<StudentProfile, "id">) => StudentProfile;
   addFacultyMember: (facultyData: Omit<ProfessorProfile, "id">) => ProfessorProfile;
   createCourse: (courseData: Omit<Course, "id" | "totalConductedSessions" | "totalStudents">) => Course;
+  departments: Department[];
+  addDepartment: (deptData: Omit<Department, "id">) => Department;
+  updateDepartment: (id: string, updates: Partial<Department>) => void;
+  deleteDepartment: (id: string) => void;
   cancelScheduledClass: (params: {
     courseId: string;
     slotId?: string;
@@ -185,9 +192,9 @@ interface AttendanceContextType {
     score: number | null,
     reason?: string
   ) => void;
-  saveDraftMarks: (courseId: string, batchId: string, section: string, marks: StudentInternalMark[]) => void;
-  finalizeMarks: (courseId: string, batchId: string, section: string) => void;
-  publishMarks: (courseId: string, batchId: string, section: string) => void;
+  saveDraftMarks: (courseId: string, batchId: string, sectionOrMarks?: any, marks?: StudentInternalMark[]) => void;
+  finalizeMarks: (courseId: string, batchId: string, section?: string) => void;
+  publishMarks: (courseId: string, batchId: string, section?: string) => void;
   getMarksAnalytics: (courseId: string, batchId?: string, section?: string) => {
     average: number;
     highest: number;
@@ -277,6 +284,7 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
   const [markAuditLogs, setMarkAuditLogs] = useState<MarkAuditLog[]>(MOCK_MARK_AUDIT_LOGS);
   const [notifications, setNotifications] = useState<AppNotification[]>(INITIAL_NOTIFICATIONS);
   const [grievances, setGrievances] = useState<StudentGrievance[]>(MOCK_GRIEVANCES);
+  const [departments, setDepartments] = useState<Department[]>(MOCK_DEPARTMENTS);
 
   const isHydrated = useRef(false);
 
@@ -291,6 +299,9 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
 
       const storedCourses = localStorage.getItem(STORAGE_KEYS.COURSES);
       if (storedCourses) setCourses(JSON.parse(storedCourses));
+
+      const storedDepts = localStorage.getItem(STORAGE_KEYS.DEPARTMENTS);
+      if (storedDepts) setDepartments(JSON.parse(storedDepts));
 
       const storedSessions = localStorage.getItem(STORAGE_KEYS.SESSIONS);
       if (storedSessions) setSessions(JSON.parse(storedSessions));
@@ -405,6 +416,49 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
       localStorage.setItem(STORAGE_KEYS.GRIEVANCES, JSON.stringify(grievances));
     } catch (e) {}
   }, [grievances]);
+
+  useEffect(() => {
+    if (!isHydrated.current) return;
+    try {
+      localStorage.setItem(STORAGE_KEYS.DEPARTMENTS, JSON.stringify(departments));
+    } catch (e) {}
+  }, [departments]);
+
+  const addDepartment = (deptData: Omit<Department, "id">): Department => {
+    const cleanCode = deptData.code.trim().toUpperCase();
+    const newDept: Department = {
+      ...deptData,
+      id: `dept-${cleanCode.toLowerCase()}-${Date.now().toString().slice(-4)}`,
+      code: cleanCode,
+    };
+    setDepartments((prev) => [newDept, ...prev]);
+
+    // Add audit log for department creation
+    const audit: AuditLog = {
+      id: `audit-${Date.now()}`,
+      sessionId: "ACADEMIC-DEPT-REGISTRY",
+      courseName: newDept.name,
+      actorId: currentAdmin.id,
+      actorName: currentAdmin.fullName,
+      actorRole: "admin",
+      action: "STATUS_OVERRIDE",
+      timestamp: new Date().toISOString(),
+      reason: `New academic department created: ${newDept.name} (${newDept.code}) in ${newDept.school}.`,
+    };
+    setAuditLogs((prev) => [audit, ...prev]);
+
+    return newDept;
+  };
+
+  const updateDepartment = (id: string, updates: Partial<Department>) => {
+    setDepartments((prev) =>
+      prev.map((d) => (d.id === id ? { ...d, ...updates } : d))
+    );
+  };
+
+  const deleteDepartment = (id: string) => {
+    setDepartments((prev) => prev.filter((d) => d.id !== id));
+  };
 
   const setSelectedBatchId = (id: string) => {
     setSelectedBatchIdState(id);
@@ -534,27 +588,22 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
 
   const activeSession = sessions.find((s) => s.status === "ACTIVE") || sessions[0] || null;
 
-  // Filter students strictly by batch and section using dynamic students state
-  const getScopedStudents = (bId = selectedBatchId, sec = selectedSection): StudentProfile[] => {
-    return students.filter((std) => {
-      const matchBatch = std.batchId === bId;
-      const matchSection = sec === "ALL" || !sec || std.section === sec;
-      return matchBatch && matchSection;
-    });
+  // Filter students strictly by batch (all students in cohort)
+  const getScopedStudents = (bId = selectedBatchId, _sec?: string): StudentProfile[] => {
+    return students.filter((std) => std.batchId === bId);
   };
 
-  // Get or lazily create an Assessment Scheme for Course + Batch + Section
-  const getCourseAssessmentScheme = (courseId: string, bId = selectedBatchId, sec = selectedSection): AssessmentScheme => {
+  // Get or lazily create an Assessment Scheme for Course + Batch
+  const getCourseAssessmentScheme = (courseId: string, bId = selectedBatchId, _sec?: string): AssessmentScheme => {
     const existing = assessmentSchemes.find(
-      (s) => s.courseId === courseId && s.batchId === bId && s.section === sec
+      (s) => s.courseId === courseId && s.batchId === bId
     );
     if (existing) return existing;
 
     const defaultScheme: AssessmentScheme = {
-      id: `scheme-${courseId}-${bId}-${sec}`,
+      id: `scheme-${courseId}-${bId}`,
       courseId,
       batchId: bId,
-      section: sec,
       totalMaxMarks: 30,
       passingMarks: 12,
       components: [
@@ -568,15 +617,15 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
     return defaultScheme;
   };
 
-  // Get or lazily populate Student Internal Marks for Course + Batch + Section
-  const getCourseMarks = (courseId: string, bId = selectedBatchId, sec = selectedSection): StudentInternalMark[] => {
+  // Get or lazily populate Student Internal Marks for Course + Batch
+  const getCourseMarks = (courseId: string, bId = selectedBatchId, _sec?: string): StudentInternalMark[] => {
     const existing = internalMarks.filter(
-      (m) => m.courseId === courseId && m.batchId === bId && m.section === sec
+      (m) => m.courseId === courseId && m.batchId === bId
     );
     if (existing.length > 0) return existing;
 
-    const scopedStudents = getScopedStudents(bId, sec);
-    const scheme = getCourseAssessmentScheme(courseId, bId, sec);
+    const scopedStudents = getScopedStudents(bId);
+    const scheme = getCourseAssessmentScheme(courseId, bId);
     const course = courses.find((c) => c.id === courseId) || courses[0];
 
     const generated: StudentInternalMark[] = scopedStudents.map((std, idx) => {
@@ -589,12 +638,11 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
       });
 
       return {
-        id: `mark-${courseId}-${bId}-${sec}-${std.id}`,
+        id: `mark-${courseId}-${bId}-${std.id}`,
         schemeId: scheme.id,
         courseId,
         courseCode: course.code,
         batchId: bId,
-        section: sec,
         studentId: std.id,
         studentRollNumber: std.rollNumber,
         studentName: std.fullName,
@@ -680,21 +728,22 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
   };
 
   // Save draft marks
-  const saveDraftMarks = (courseId: string, bId: string, sec: string, marksToSave: StudentInternalMark[]) => {
+  const saveDraftMarks = (courseId: string, bId: string, secOrMarks: any, marksToSave?: StudentInternalMark[]) => {
+    const list: StudentInternalMark[] = Array.isArray(secOrMarks) ? secOrMarks : (marksToSave || []);
     setInternalMarks((prev) => {
       const filtered = prev.filter(
-        (m) => !(m.courseId === courseId && m.batchId === bId && m.section === sec)
+        (m) => !(m.courseId === courseId && m.batchId === bId)
       );
-      const updatedMarks = marksToSave.map((m) => ({ ...m, status: "DRAFT" as MarkStatus }));
+      const updatedMarks = list.map((m) => ({ ...m, status: "DRAFT" as MarkStatus }));
       return [...filtered, ...updatedMarks];
     });
   };
 
   // Finalize marks
-  const finalizeMarks = (courseId: string, bId: string, sec: string) => {
+  const finalizeMarks = (courseId: string, bId: string, _sec?: string) => {
     setInternalMarks((prev) =>
       prev.map((m) => {
-        if (m.courseId === courseId && m.batchId === bId && m.section === sec) {
+        if (m.courseId === courseId && m.batchId === bId) {
           return {
             ...m,
             status: "FINALIZED",
@@ -708,10 +757,10 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
   };
 
   // Publish marks
-  const publishMarks = (courseId: string, bId: string, sec: string) => {
+  const publishMarks = (courseId: string, bId: string, _sec?: string) => {
     setInternalMarks((prev) =>
       prev.map((m) => {
-        if (m.courseId === courseId && m.batchId === bId && m.section === sec) {
+        if (m.courseId === courseId && m.batchId === bId) {
           return {
             ...m,
             status: "PUBLISHED",
@@ -725,9 +774,9 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
   };
 
   // Marks Analytics
-  const getMarksAnalytics = (courseId: string, bId = selectedBatchId, sec = selectedSection) => {
-    const marks = getCourseMarks(courseId, bId, sec);
-    const scheme = getCourseAssessmentScheme(courseId, bId, sec);
+  const getMarksAnalytics = (courseId: string, bId = selectedBatchId, _sec?: string) => {
+    const marks = getCourseMarks(courseId, bId);
+    const scheme = getCourseAssessmentScheme(courseId, bId);
     const maxMarks = scheme.totalMaxMarks || 30;
     const passingThreshold = scheme.passingMarks || 12;
 
@@ -781,13 +830,13 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
     courseId: string,
     type: "MANUAL" | "QR" | "CODE",
     bId = selectedBatchId,
-    sec = selectedSection,
+    _sec?: string,
     sessionHours = 1,
     category: "THEORY" | "LAB" = "THEORY"
   ): AttendanceSession => {
     const course = courses.find((c) => c.id === courseId) || courses[0];
     const batch = batches.find((b) => b.id === bId) || batches[0];
-    const scopedStudents = getScopedStudents(bId, sec);
+    const scopedStudents = getScopedStudents(bId);
     const newSessionId = `sess-${Date.now()}`;
     const code = Math.random().toString(36).substring(2, 7).toUpperCase();
     const qrToken = `uohyd-${course.code.toLowerCase()}-${Date.now()}`;
@@ -813,7 +862,6 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
       courseName: course.name,
       batchId: batch.id,
       batchName: batch.name,
-      section: sec,
       professorId: currentProfessor.id,
       professorName: currentProfessor.fullName,
       program: course.program,
@@ -1506,6 +1554,10 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
         enrollStudent,
         addFacultyMember,
         createCourse,
+        departments,
+        addDepartment,
+        updateDepartment,
+        deleteDepartment,
         cancelScheduledClass,
         uncancelClass,
         updateCourseSchedule,

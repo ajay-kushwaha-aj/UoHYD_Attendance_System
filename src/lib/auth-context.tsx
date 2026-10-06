@@ -9,7 +9,7 @@ import {
   ProfessorProfile,
   AdminProfile,
 } from "@/types";
-import { MOCK_STUDENTS, MOCK_PROFESSOR, MOCK_ADMIN } from "./mock-data";
+import { MOCK_STUDENTS, MOCK_PROFESSOR, MOCK_PROFESSORS, MOCK_ADMIN } from "./mock-data";
 
 export interface AuthUser {
   id: string;
@@ -29,7 +29,7 @@ export interface AuthUser {
 
 export const DEMO_ACCOUNTS: Record<UserRole, { email: string; password: string; user: AuthUser }> = {
   student: {
-    email: "ajay.k@uohyd.ac.in",
+    email: "25mcms01@uohyd.ac.in",
     password: "student123",
     user: {
       ...MOCK_STUDENTS[0],
@@ -101,41 +101,70 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Simulate network latency
     await new Promise((res) => setTimeout(res, 600));
 
-    const cleanEmail = email.trim().toLowerCase();
+    const raw = email.trim().toLowerCase();
+    const withoutDomain = raw.replace("@uohyd.ac.in", "").trim();
+    const withDomain = `${withoutDomain}@uohyd.ac.in`;
 
     // 1. Check matching demo accounts
     let matchedRole: UserRole | null = requestedRole || null;
     let matchedUser: AuthUser | null = null;
 
-    if (cleanEmail === DEMO_ACCOUNTS.student.email.toLowerCase()) {
+    if (
+      withDomain === DEMO_ACCOUNTS.student.email.toLowerCase() ||
+      withoutDomain === DEMO_ACCOUNTS.student.user.rollNumber?.toLowerCase() ||
+      withoutDomain === "25mcms01"
+    ) {
       matchedRole = "student";
       matchedUser = DEMO_ACCOUNTS.student.user;
-    } else if (cleanEmail === DEMO_ACCOUNTS.professor.email.toLowerCase()) {
+    } else if (
+      withDomain === DEMO_ACCOUNTS.professor.email.toLowerCase() ||
+      withoutDomain === DEMO_ACCOUNTS.professor.user.employeeCode?.toLowerCase() ||
+      withoutDomain === "emp-uoh-882" ||
+      withoutDomain === "dr.rao"
+    ) {
       matchedRole = "professor";
       matchedUser = DEMO_ACCOUNTS.professor.user;
-    } else if (cleanEmail === DEMO_ACCOUNTS.admin.email.toLowerCase()) {
+    } else if (
+      withDomain === DEMO_ACCOUNTS.admin.email.toLowerCase() ||
+      withoutDomain === "academic.admin" ||
+      withoutDomain === "admin"
+    ) {
       matchedRole = "admin";
       matchedUser = DEMO_ACCOUNTS.admin.user;
     } else {
-      // Check other student roster emails
+      // Check other student roster emails / roll numbers (format: YYDeptSerial e.g. 25MCMS01)
       const studentMatch = MOCK_STUDENTS.find(
-        (s) => s.email.toLowerCase() === cleanEmail
+        (s) =>
+          s.email.toLowerCase() === withDomain ||
+          s.rollNumber?.toLowerCase() === withoutDomain ||
+          s.email.toLowerCase() === raw
       );
       if (studentMatch) {
         matchedRole = "student";
         matchedUser = { ...studentMatch };
-      } else if (cleanEmail.includes("@uohyd.ac.in") || cleanEmail.includes("uohyd")) {
-        // Generic fallback for any uohyd institutional address
-        const fallbackRole = requestedRole || "student";
-        matchedRole = fallbackRole;
-        matchedUser = {
-          id: `usr-${Date.now()}`,
-          email: cleanEmail,
-          fullName: cleanEmail.split("@")[0].replace(".", " ").toUpperCase(),
-          role: fallbackRole,
-          department: "Department of Systems & Computational Biology",
-          rollNumber: fallbackRole === "student" ? "23MCMS99" : undefined,
-        };
+      } else {
+        const profMatch = MOCK_PROFESSORS.find(
+          (p) =>
+            p.email.toLowerCase() === withDomain ||
+            p.employeeCode?.toLowerCase() === withoutDomain ||
+            p.email.toLowerCase() === raw
+        );
+        if (profMatch) {
+          matchedRole = "professor";
+          matchedUser = { ...profMatch };
+        } else if (raw.includes("@uohyd.ac.in") || withoutDomain.length > 0) {
+          // Fallback institutional account
+          const fallbackRole = requestedRole || "student";
+          matchedRole = fallbackRole;
+          matchedUser = {
+            id: `usr-${Date.now()}`,
+            email: withDomain,
+            fullName: withoutDomain.toUpperCase(),
+            role: fallbackRole,
+            department: "Department of Systems & Computational Biology",
+            rollNumber: fallbackRole === "student" ? withoutDomain.toUpperCase() : undefined,
+          };
+        }
       }
     }
 
@@ -143,7 +172,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(false);
       return {
         success: false,
-        error: "Invalid institutional credentials. Please use your @uohyd.ac.in account.",
+        error: "Invalid institutional credentials. Please check your email/ID and password.",
+      };
+    }
+
+    // Role mismatch check if requestedRole was strictly specified
+    if (requestedRole && matchedRole !== requestedRole) {
+      setIsLoading(false);
+      return {
+        success: false,
+        error: `This account has the role "${matchedRole}". Please use the ${matchedRole.toUpperCase()} login page.`,
       };
     }
 

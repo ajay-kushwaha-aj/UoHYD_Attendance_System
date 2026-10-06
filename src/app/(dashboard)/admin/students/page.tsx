@@ -35,7 +35,6 @@ export default function AdminStudentsPage() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [batchId, setBatchId] = useState("batch-2025-27");
-  const [section, setSection] = useState("A");
   const [semester, setSemester] = useState(2);
   const [program, setProgram] = useState("MSc Systems & Computational Biology");
 
@@ -71,7 +70,6 @@ export default function AdminStudentsPage() {
       phone,
       batchId,
       batchName: chosenBatch?.name || "MSc SCB 2025–27",
-      section,
       semester: Number(semester),
       program,
       department: "Department of Systems & Computational Biology",
@@ -85,11 +83,11 @@ export default function AdminStudentsPage() {
   };
 
   const handleExportCsv = () => {
-    const headers = "Roll Number,Full Name,Email,Program,Batch,Section,Semester,Status\n";
+    const headers = "Roll Number,Full Name,Email,Program,Batch,Semester,Status\n";
     const rows = filtered
       .map(
         (s) =>
-          `"${s.rollNumber}","${s.fullName}","${s.email}","${s.program}","${s.batchName || s.batchId}","${s.section}","Sem ${s.semester}","Active"`
+          `"${s.rollNumber}","${s.fullName}","${s.email}","${s.program}","${s.batchName || s.batchId}","Sem ${s.semester}","Active"`
       )
       .join("\n");
     const blob = new Blob([headers + rows], { type: "text/csv;charset=utf-8;" });
@@ -183,7 +181,7 @@ export default function AdminStudentsPage() {
                 <th className="px-6 py-3.5">Roll Number</th>
                 <th className="px-6 py-3.5">Full Name</th>
                 <th className="px-6 py-3.5">Institutional Email</th>
-                <th className="px-6 py-3.5">Batch & Section</th>
+                <th className="px-6 py-3.5">Batch Cohort</th>
                 <th className="px-6 py-3.5 text-center">Semester</th>
                 <th className="px-6 py-3.5 text-right">Status</th>
               </tr>
@@ -202,9 +200,6 @@ export default function AdminStudentsPage() {
                   </td>
                   <td className="px-6 py-3 text-on-surface-variant">
                     <span className="font-medium text-on-surface">{s.batchName || s.batchId}</span>
-                    <span className="ml-1.5 text-[10px] bg-surface-container px-1.5 py-0.5 rounded font-bold text-on-surface-variant">
-                      Sec {s.section}
-                    </span>
                   </td>
                   <td className="px-6 py-3 text-center font-mono text-on-surface font-semibold">
                     Sem {s.semester}
@@ -299,7 +294,7 @@ export default function AdminStudentsPage() {
               </FormSection>
 
               <FormSection title="Academic Cohort Placement">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   <FormField label="Batch" required>
                     <select
                       value={batchId}
@@ -311,17 +306,6 @@ export default function AdminStudentsPage() {
                           {b.name}
                         </option>
                       ))}
-                    </select>
-                  </FormField>
-
-                  <FormField label="Section" required>
-                    <select
-                      value={section}
-                      onChange={(e) => setSection(e.target.value)}
-                      className="w-full h-10 rounded-xl border border-border bg-surface px-3 text-xs font-semibold text-on-surface shadow-xs hover:border-outline focus:border-primary focus:outline-none focus:ring-3 focus:ring-primary/15 transition-all"
-                    >
-                      <option value="A">Section A</option>
-                      <option value="B">Section B</option>
                     </select>
                   </FormField>
 
