@@ -146,11 +146,7 @@ export default function LoginPage() {
       return;
     }
 
-    const fullVal = clean.toUpperCase().startsWith("EMP-")
-      ? clean
-      : `${clean.toLowerCase()}@uohyd.ac.in`;
-
-    const res = await login(fullVal, password, activeRole);
+    const res = await login(clean, password, activeRole);
     if (!res.success && res.error) {
       setErrorMessage(res.error);
     }

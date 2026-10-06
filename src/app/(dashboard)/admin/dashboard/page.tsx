@@ -20,16 +20,21 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 export default function AdminDashboard() {
-  const { currentAdmin, courses, auditLogs, cancelledClasses } = useAttendance();
+  const { currentAdmin, courses, auditLogs, cancelledClasses, students, isDbConnected } = useAttendance();
 
   return (
     <div className="space-y-8 animate-in fade-in duration-200">
       {/* Welcome Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <span className="text-xs font-bold uppercase tracking-wider text-tertiary-teal">
-            Institutional Administration
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-tertiary-teal">
+              Institutional Administration
+            </span>
+            <Badge variant="present" withDot className="text-[10px] py-0.5">
+              Turso Database Live
+            </Badge>
+          </div>
           <h1 className="text-2xl md:text-3xl font-bold text-on-surface tracking-tight mt-0.5">
             Department of Systems & Computational Biology
           </h1>
@@ -52,8 +57,8 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title="Total Enrolled Students"
-          value="8 Cohort"
-          subtitle="MSc SCB Batch"
+          value={`${students.length} Students`}
+          subtitle="MSc SCB Cohort"
           icon={<Users className="w-5 h-5 text-primary-container" />}
         />
         <StatCard

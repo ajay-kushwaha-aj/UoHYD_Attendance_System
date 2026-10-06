@@ -36,6 +36,7 @@ export interface ProfessorProfile extends Profile {
 export interface AdminProfile extends Profile {
   role: "admin";
   department: string;
+  officeRoom?: string;
 }
 
 export interface Department {

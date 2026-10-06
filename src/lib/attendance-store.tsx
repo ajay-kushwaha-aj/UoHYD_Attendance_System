@@ -55,6 +55,8 @@ const STORAGE_KEYS = {
   NOTIFICATIONS: "uohyd_notifications_v1",
   GRIEVANCES: "uohyd_student_grievances_v1",
   DEPARTMENTS: "uohyd_departments_v1",
+  ADMIN_PROFILE: "uohyd_admin_profile_v1",
+  SYSTEM_SETTINGS: "uohyd_system_settings_v1",
   SELECTED_BATCH: "uohyd_selected_batch_id",
   SELECTED_SECTION: "uohyd_selected_section",
 };
@@ -156,11 +158,18 @@ interface AttendanceContextType {
   updateStudent: (id: string, updates: Partial<StudentProfile>) => void;
   deleteStudent: (id: string) => void;
   addFacultyMember: (facultyData: Omit<ProfessorProfile, "id">) => ProfessorProfile;
+  updateFacultyMember: (id: string, updates: Partial<ProfessorProfile>) => void;
   createCourse: (courseData: Omit<Course, "id" | "totalConductedSessions" | "totalStudents">) => Course;
+  updateCourse: (id: string, updates: Partial<Course>) => void;
   departments: Department[];
   addDepartment: (deptData: Omit<Department, "id">) => Department;
   updateDepartment: (id: string, updates: Partial<Department>) => void;
   deleteDepartment: (id: string) => void;
+  updateAdminProfile: (updates: Partial<AdminProfile> & { newPassword?: string; officeRoom?: string }) => Promise<void>;
+  systemSettings: { minThreshold: string; criticalThreshold: string; qrExpiryMinutes: string };
+  updateSystemSettings: (settings: { minThreshold?: string; criticalThreshold?: string; qrExpiryMinutes?: string }) => Promise<void>;
+  refreshFromDatabase: () => Promise<void>;
+  isDbConnected: boolean;
   cancelScheduledClass: (params: {
     courseId: string;
     slotId?: string;
@@ -287,6 +296,17 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
   const [notifications, setNotifications] = useState<AppNotification[]>(INITIAL_NOTIFICATIONS);
   const [grievances, setGrievances] = useState<StudentGrievance[]>(MOCK_GRIEVANCES);
   const [departments, setDepartments] = useState<Department[]>(MOCK_DEPARTMENTS);
+  const [currentAdmin, setCurrentAdmin] = useState<AdminProfile>(MOCK_ADMIN);
+  const [systemSettings, setSystemSettings] = useState<{
+    minThreshold: string;
+    criticalThreshold: string;
+    qrExpiryMinutes: string;
+  }>({
+    minThreshold: "75",
+    criticalThreshold: "60",
+    qrExpiryMinutes: "5",
+  });
+  const [isDbConnected, setIsDbConnected] = useState<boolean>(true);
 
   const isHydrated = useRef(false);
 
@@ -334,11 +354,66 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
 
       const storedSection = localStorage.getItem(STORAGE_KEYS.SELECTED_SECTION);
       if (storedSection) setSelectedSectionState(storedSection);
+
+      const storedAdmin = localStorage.getItem(STORAGE_KEYS.ADMIN_PROFILE);
+      if (storedAdmin) setCurrentAdmin(JSON.parse(storedAdmin));
+
+      const storedSettings = localStorage.getItem(STORAGE_KEYS.SYSTEM_SETTINGS);
+      if (storedSettings) setSystemSettings(JSON.parse(storedSettings));
     } catch (e) {
       console.warn("Could not load stored data from localStorage", e);
     } finally {
       isHydrated.current = true;
     }
+  }, []);
+
+  // Sync from Database on Mount & function for manual refresh
+  const refreshFromDatabase = async () => {
+    try {
+      const [stdRes, profRes, courseRes, deptRes, adminRes, settingsRes, auditRes] = await Promise.allSettled([
+        fetch("/api/students").then((r) => r.json()),
+        fetch("/api/professors").then((r) => r.json()),
+        fetch("/api/courses").then((r) => r.json()),
+        fetch("/api/departments").then((r) => r.json()),
+        fetch("/api/admin/profile").then((r) => r.json()),
+        fetch("/api/admin/settings").then((r) => r.json()),
+        fetch("/api/audit-logs").then((r) => r.json()),
+      ]);
+
+      if (stdRes.status === "fulfilled" && stdRes.value?.success && Array.isArray(stdRes.value.students) && stdRes.value.students.length > 0) {
+        setStudents(stdRes.value.students);
+      }
+      if (profRes.status === "fulfilled" && profRes.value?.success && Array.isArray(profRes.value.professors) && profRes.value.professors.length > 0) {
+        setProfessors(profRes.value.professors);
+      }
+      if (courseRes.status === "fulfilled" && courseRes.value?.success && Array.isArray(courseRes.value.courses) && courseRes.value.courses.length > 0) {
+        setCourses(courseRes.value.courses);
+      }
+      if (deptRes.status === "fulfilled" && deptRes.value?.success && Array.isArray(deptRes.value.departments) && deptRes.value.departments.length > 0) {
+        setDepartments(deptRes.value.departments);
+      }
+      if (adminRes.status === "fulfilled" && adminRes.value?.success && adminRes.value.profile) {
+        setCurrentAdmin(adminRes.value.profile);
+      }
+      if (settingsRes.status === "fulfilled" && settingsRes.value?.success && settingsRes.value.settings) {
+        setSystemSettings(settingsRes.value.settings);
+      }
+      if (auditRes.status === "fulfilled" && auditRes.value?.success && Array.isArray(auditRes.value.auditLogs) && auditRes.value.auditLogs.length > 0) {
+        setAuditLogs((prev) => {
+          const existingIds = new Set(prev.map((a) => a.id));
+          const newLogs = auditRes.value.auditLogs.filter((a: AuditLog) => !existingIds.has(a.id));
+          return [...newLogs, ...prev];
+        });
+      }
+      setIsDbConnected(true);
+    } catch (err) {
+      console.warn("Database sync encountered an issue:", err);
+      setIsDbConnected(false);
+    }
+  };
+
+  useEffect(() => {
+    refreshFromDatabase();
   }, []);
 
   // Sync state mutations to localStorage
@@ -435,6 +510,13 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
     };
     setDepartments((prev) => [newDept, ...prev]);
 
+    // Async persist to Turso Database
+    fetch("/api/departments", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newDept),
+    }).catch((err) => console.error("Database save failed for department:", err));
+
     // Add audit log for department creation
     const audit: AuditLog = {
       id: `audit-${Date.now()}`,
@@ -448,6 +530,11 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
       reason: `New academic department created: ${newDept.name} (${newDept.code}) in ${newDept.school}.`,
     };
     setAuditLogs((prev) => [audit, ...prev]);
+    fetch("/api/audit-logs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(audit),
+    }).catch(() => {});
 
     return newDept;
   };
@@ -456,10 +543,22 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
     setDepartments((prev) =>
       prev.map((d) => (d.id === id ? { ...d, ...updates } : d))
     );
+
+    // Async persist update to Turso Database
+    fetch("/api/departments", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, ...updates }),
+    }).catch((err) => console.error("Database update failed for department:", err));
   };
 
   const deleteDepartment = (id: string) => {
     setDepartments((prev) => prev.filter((d) => d.id !== id));
+
+    // Async delete from Turso Database
+    fetch(`/api/departments?id=${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    }).catch((err) => console.error("Database delete failed for department:", err));
   };
 
   const setSelectedBatchId = (id: string) => {
@@ -486,6 +585,13 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
 
     setStudents((prev) => [newStudent, ...prev]);
 
+    // Async persist to Turso Database
+    fetch("/api/students", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newStudent),
+    }).catch((err) => console.error("Database save failed for student:", err));
+
     // Append to audit log
     const audit: AuditLog = {
       id: `audit-${Date.now()}`,
@@ -503,6 +609,11 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
       timestamp: new Date().toISOString(),
     };
     setAuditLogs((prev) => [audit, ...prev]);
+    fetch("/api/audit-logs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(audit),
+    }).catch(() => {});
 
     return newStudent;
   };
@@ -512,6 +623,13 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
     setStudents((prev) =>
       prev.map((s) => (s.id === id ? { ...s, ...updates } : s))
     );
+
+    // Async persist update to Turso Database
+    fetch("/api/students", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, ...updates }),
+    }).catch((err) => console.error("Database update failed for student:", err));
 
     // Audit log
     const targetStudent = students.find((s) => s.id === id);
@@ -532,12 +650,22 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
       timestamp: new Date().toISOString(),
     };
     setAuditLogs((prev) => [audit, ...prev]);
+    fetch("/api/audit-logs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(audit),
+    }).catch(() => {});
   };
 
   // Action: Delete / Archive Student
   const deleteStudent = (id: string) => {
     const studentToDelete = students.find((s) => s.id === id);
     setStudents((prev) => prev.filter((s) => s.id !== id));
+
+    // Async delete from Turso Database
+    fetch(`/api/students?id=${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    }).catch((err) => console.error("Database delete failed for student:", err));
 
     if (studentToDelete) {
       const audit: AuditLog = {
@@ -556,6 +684,11 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
         timestamp: new Date().toISOString(),
       };
       setAuditLogs((prev) => [audit, ...prev]);
+      fetch("/api/audit-logs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(audit),
+      }).catch(() => {});
     }
   };
 
@@ -568,7 +701,29 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
     };
 
     setProfessors((prev) => [...prev, newFaculty]);
+
+    // Async persist to Turso Database
+    fetch("/api/professors", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newFaculty),
+    }).catch((err) => console.error("Database save failed for professor:", err));
+
     return newFaculty;
+  };
+
+  // Action: Update Faculty Member Details
+  const updateFacultyMember = (id: string, updates: Partial<ProfessorProfile>) => {
+    setProfessors((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, ...updates } : p))
+    );
+
+    // Async persist to Turso Database
+    fetch("/api/professors", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, ...updates }),
+    }).catch((err) => console.error("Database update failed for professor:", err));
   };
 
   // Action: Create New Course
@@ -582,7 +737,29 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
     };
 
     setCourses((prev) => [...prev, newCourse]);
+
+    // Async persist to Turso Database
+    fetch("/api/courses", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newCourse),
+    }).catch((err) => console.error("Database save failed for course:", err));
+
     return newCourse;
+  };
+
+  // Action: Update Course Details
+  const updateCourse = (id: string, updates: Partial<Course>) => {
+    setCourses((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, ...updates } : c))
+    );
+
+    // Async persist to Turso Database
+    fetch("/api/courses", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, ...updates }),
+    }).catch((err) => console.error("Database update failed for course:", err));
   };
 
   // Action: Update Course Schedule & Timetable
@@ -607,6 +784,51 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
         };
       })
     );
+
+    // Async persist schedule to Turso Database
+    fetch("/api/courses", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: courseId, ...scheduleData }),
+    }).catch((err) => console.error("Database schedule update failed for course:", err));
+  };
+
+  // Action: Update Admin Profile (phone, office location, password)
+  const updateAdminProfile = async (updates: Partial<AdminProfile> & { newPassword?: string; officeRoom?: string }) => {
+    setCurrentAdmin((prev) => ({
+      ...prev,
+      ...updates,
+      phone: updates.phone ?? prev.phone,
+      officeRoom: updates.officeRoom ?? prev.officeRoom,
+    }));
+
+    try {
+      await fetch("/api/admin/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updates),
+      });
+    } catch (err) {
+      console.error("Database update failed for admin profile:", err);
+    }
+  };
+
+  // Action: Update Academic Settings (minThreshold, criticalThreshold, qrExpiryMinutes)
+  const updateSystemSettings = async (updates: { minThreshold?: string; criticalThreshold?: string; qrExpiryMinutes?: string }) => {
+    setSystemSettings((prev) => ({
+      ...prev,
+      ...updates,
+    }));
+
+    try {
+      await fetch("/api/admin/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updates),
+      });
+    } catch (err) {
+      console.error("Database update failed for system settings:", err);
+    }
   };
 
   // Reset to initial defaults
@@ -614,6 +836,8 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
     setStudents(MOCK_STUDENTS);
     setProfessors(MOCK_PROFESSORS);
     setCourses(MOCK_COURSES);
+    setDepartments(MOCK_DEPARTMENTS);
+    setCurrentAdmin(MOCK_ADMIN);
     setSessions(MOCK_SESSIONS);
     setAssessmentSchemes(MOCK_ASSESSMENT_SCHEMES);
     setInternalMarks(MOCK_INTERNAL_MARKS);
@@ -626,6 +850,8 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
       localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(MOCK_STUDENTS));
       localStorage.setItem(STORAGE_KEYS.PROFESSORS, JSON.stringify(MOCK_PROFESSORS));
       localStorage.setItem(STORAGE_KEYS.COURSES, JSON.stringify(MOCK_COURSES));
+      localStorage.setItem(STORAGE_KEYS.DEPARTMENTS, JSON.stringify(MOCK_DEPARTMENTS));
+      localStorage.setItem(STORAGE_KEYS.ADMIN_PROFILE, JSON.stringify(MOCK_ADMIN));
       localStorage.setItem(STORAGE_KEYS.SESSIONS, JSON.stringify(MOCK_SESSIONS));
       localStorage.setItem(STORAGE_KEYS.SCHEMES, JSON.stringify(MOCK_ASSESSMENT_SCHEMES));
       localStorage.setItem(STORAGE_KEYS.MARKS, JSON.stringify(MOCK_INTERNAL_MARKS));
@@ -638,7 +864,6 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
 
   const currentStudent = students[0] || MOCK_STUDENTS[0];
   const currentProfessor = professors[0] || MOCK_PROFESSOR;
-  const currentAdmin = MOCK_ADMIN;
 
   const activeSession = sessions.find((s) => s.status === "ACTIVE") || sessions[0] || null;
 
@@ -1609,11 +1834,18 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
         updateStudent,
         deleteStudent,
         addFacultyMember,
+        updateFacultyMember,
         createCourse,
+        updateCourse,
         departments,
         addDepartment,
         updateDepartment,
         deleteDepartment,
+        updateAdminProfile,
+        systemSettings,
+        updateSystemSettings,
+        refreshFromDatabase,
+        isDbConnected,
         cancelScheduledClass,
         uncancelClass,
         updateCourseSchedule,

@@ -25,35 +25,63 @@ import { FormField, FormSection } from "@/components/ui/form-field";
 type AdminTab = "credentials" | "permissions" | "security";
 
 export default function AdminProfilePage() {
-  const { currentAdmin, auditLogs } = useAttendance();
+  const { currentAdmin, auditLogs, updateAdminProfile } = useAttendance();
 
   const [activeTab, setActiveTab] = useState<AdminTab>("credentials");
 
   // Editable Contact
-  const [phone, setPhone] = useState("+91 40 2313 4001");
-  const [officeRoom, setOfficeRoom] = useState("Dean's Office, Administration Block, Ground Floor");
+  const [phone, setPhone] = useState(currentAdmin.phone || "+91 40 2313 4001");
+  const [officeRoom, setOfficeRoom] = useState(currentAdmin.officeRoom || "Dean's Office, Administration Block, Ground Floor");
   const [isSavedToast, setIsSavedToast] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Security Form
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordToast, setPasswordToast] = useState(false);
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
 
-  const handleSaveContact = (e: React.FormEvent) => {
+  React.useEffect(() => {
+    if (currentAdmin.phone) setPhone(currentAdmin.phone);
+    if (currentAdmin.officeRoom) setOfficeRoom(currentAdmin.officeRoom);
+  }, [currentAdmin]);
+
+  const handleSaveContact = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSavedToast(true);
-    setTimeout(() => setIsSavedToast(false), 3000);
+    setIsSaving(true);
+    try {
+      await updateAdminProfile({
+        phone: phone.trim(),
+        officeRoom: officeRoom.trim(),
+      });
+      setIsSavedToast(true);
+      setTimeout(() => setIsSavedToast(false), 3500);
+    } catch (err) {
+      console.error("Failed to save admin contact:", err);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handlePasswordChange = (e: React.FormEvent) => {
+  const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newPassword || newPassword !== confirmPassword) return;
-    setPasswordToast(true);
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmPassword("");
-    setTimeout(() => setPasswordToast(false), 3000);
+    setIsUpdatingPassword(true);
+    try {
+      await updateAdminProfile({
+        newPassword: newPassword.trim(),
+      });
+      setPasswordToast(true);
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setTimeout(() => setPasswordToast(false), 3500);
+    } catch (err) {
+      console.error("Failed to update password:", err);
+    } finally {
+      setIsUpdatingPassword(false);
+    }
   };
 
   return (
@@ -227,12 +255,34 @@ export default function AdminProfilePage() {
                       className="text-xs"
                     />
                   </FormField>
+
+                  <div className="sm:col-span-2">
+                    <FormField label="Administrative Office Location & Room" required>
+                      <Input
+                        type="text"
+                        value={officeRoom}
+                        onChange={(e) => setOfficeRoom(e.target.value)}
+                        icon={<Building2 className="w-4 h-4" />}
+                        required
+                        className="text-xs"
+                      />
+                    </FormField>
+                  </div>
                 </div>
               </FormSection>
 
-              <div className="flex justify-end pt-2 border-t border-surface-container">
-                <Button type="submit" variant="primary" size="default" className="bg-primary-container font-bold gap-1.5 shadow-sm">
-                  <Save className="w-4 h-4" /> Save Office Details
+              <div className="flex items-center justify-between pt-2 border-t border-surface-container">
+                <span className="text-[11px] text-emerald-700 font-medium flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Synchronized with Central Database
+                </span>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="default"
+                  disabled={isSaving}
+                  className="bg-primary-container font-bold gap-1.5 shadow-sm"
+                >
+                  <Save className="w-4 h-4" /> {isSaving ? "Saving to Database..." : "Save Office Details"}
                 </Button>
               </div>
             </form>
@@ -361,9 +411,9 @@ export default function AdminProfilePage() {
                 variant="primary"
                 size="default"
                 className="bg-primary-container font-bold shadow-sm"
-                disabled={!newPassword || newPassword !== confirmPassword}
+                disabled={!newPassword || newPassword !== confirmPassword || isUpdatingPassword}
               >
-                Update Master Password
+                {isUpdatingPassword ? "Updating in Database..." : "Update Master Password"}
               </Button>
             </form>
           </Card>
