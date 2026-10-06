@@ -11,9 +11,7 @@ import {
   Briefcase,
   ShieldCheck,
   ChevronDown,
-  Check,
   LogOut,
-  Sparkles,
   AlertTriangle,
   BookOpen,
   Calendar,
@@ -37,7 +35,6 @@ export function Header({ onOpenSearch }: HeaderProps) {
   const router = useRouter();
   const {
     activeSession,
-    setCurrentRole,
     notifications,
     unreadNotificationCount,
     markNotificationAsRead,
@@ -45,9 +42,8 @@ export function Header({ onOpenSearch }: HeaderProps) {
     clearNotification,
     clearAllNotifications,
   } = useAttendance();
-  const { user, role, switchRole, logout } = useAuth();
+  const { user, role, logout } = useAuth();
 
-  const [roleMenuOpen, setRoleMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [notifFilter, setNotifFilter] = useState<"all" | "unread" | "cancellations">("all");
@@ -68,34 +64,6 @@ export function Header({ onOpenSearch }: HeaderProps) {
     role: "professor",
     department: "Department of Systems & Computational Biology",
     designation: "Professor & Head of Department",
-  };
-
-  const roleOptions: { role: UserRole; label: string; icon: typeof User; sub: string }[] = [
-    {
-      role: "student",
-      label: "Student Account",
-      icon: GraduationCap,
-      sub: "Ajay Kumar (23MCMS01)",
-    },
-    {
-      role: "professor",
-      label: "Professor Account",
-      icon: Briefcase,
-      sub: "Prof. K. Venkatesh Rao (HOD)",
-    },
-    {
-      role: "admin",
-      label: "Administrator Account",
-      icon: ShieldCheck,
-      sub: "Dr. S. R. Murthy (Academic)",
-    },
-  ];
-
-  const handleRoleSwitch = (newRole: UserRole) => {
-    switchRole(newRole);
-    setCurrentRole(newRole);
-    setRoleMenuOpen(false);
-    setUserMenuOpen(false);
   };
 
   // Filtered notifications based on active role and tab
@@ -143,62 +111,14 @@ export function Header({ onOpenSearch }: HeaderProps) {
         )}
       </div>
 
-      {/* Right: Role Switcher, Notifications & User Profile */}
+      {/* Right: Notifications, User Profile & Sync */}
       <div className="flex items-center gap-3">
-        {/* Role Switcher Pill */}
-        <div className="relative">
-          <button
-            onClick={() => setRoleMenuOpen(!roleMenuOpen)}
-            className="flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 hover:bg-primary/10 px-3.5 py-2 text-xs font-bold text-primary transition-all shadow-2xs"
-          >
-            {currentRole === "student" && <GraduationCap className="w-4 h-4 text-primary" />}
-            {currentRole === "professor" && <Briefcase className="w-4 h-4 text-primary" />}
-            {currentRole === "admin" && <ShieldCheck className="w-4 h-4 text-primary" />}
-            <span className="capitalize">{currentRole} Mode</span>
-            <ChevronDown className="w-3.5 h-3.5 opacity-60 ml-0.5" />
-          </button>
-
-          {roleMenuOpen && (
-            <>
-              <div
-                className="fixed inset-0 z-40"
-                onClick={() => setRoleMenuOpen(false)}
-              />
-              <div className="absolute right-0 mt-2 w-64 rounded-xl border border-border bg-surface-lowest p-1.5 shadow-elevation-2 z-50 animate-in fade-in zoom-in-95">
-                <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant border-b border-surface-container flex items-center justify-between">
-                  <span>Switch Active Role</span>
-                  <Sparkles className="w-3 h-3 text-tertiary-teal" />
-                </div>
-                {roleOptions.map((opt) => {
-                  const Icon = opt.icon;
-                  const isSelected = currentRole === opt.role;
-                  return (
-                    <button
-                      key={opt.role}
-                      onClick={() => handleRoleSwitch(opt.role)}
-                      className={cn(
-                        "flex w-full items-start gap-2.5 rounded-lg p-2 text-left text-xs transition-colors mt-1",
-                        isSelected
-                          ? "bg-primary-fixed/40 text-primary-container font-semibold"
-                          : "text-on-surface hover:bg-surface-low"
-                      )}
-                    >
-                      <Icon className="w-4 h-4 mt-0.5 shrink-0 text-primary-container" />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <span className="font-semibold">{opt.label}</span>
-                          {isSelected && <Check className="w-3.5 h-3.5 text-primary-container" />}
-                        </div>
-                        <p className="text-[11px] text-on-surface-variant truncate font-normal">
-                          {opt.sub}
-                        </p>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </>
-          )}
+        {/* Active Portal Badge (Read-Only) */}
+        <div className="hidden sm:flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3 py-1.5 text-xs font-bold text-primary select-none shadow-2xs">
+          {currentRole === "student" && <GraduationCap className="w-4 h-4 text-primary" />}
+          {currentRole === "professor" && <Briefcase className="w-4 h-4 text-primary" />}
+          {currentRole === "admin" && <ShieldCheck className="w-4 h-4 text-primary" />}
+          <span className="capitalize">{currentRole} Portal</span>
         </div>
 
         {/* Notifications Icon & Popover */}
