@@ -20,7 +20,7 @@ import { FormField } from "@/components/ui/form-field";
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("dr.rao@uohyd.ac.in");
+  const [email, setEmail] = useState("");
   const [step, setStep] = useState<"request" | "verify">("request");
   const [otp, setOtp] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -33,7 +33,7 @@ export default function ForgotPasswordPage() {
     setTimeout(() => {
       setIsLoading(false);
       setStep("verify");
-      setOtp("849201");
+      setOtp("");
     }, 800);
   };
 
@@ -140,10 +140,10 @@ export default function ForgotPasswordPage() {
               <FormField
                 label="6-Digit Verification Code"
                 required
-                hint="Auto-filled for demonstration"
+                hint="Enter the 6-digit code received on your email"
               >
                 <Input
-                  placeholder="849201"
+                  placeholder="000000"
                   value={otp}
                   onChange={(e) => setOtp(e.target.value)}
                   className="text-center text-xl font-mono tracking-widest font-bold h-12"
