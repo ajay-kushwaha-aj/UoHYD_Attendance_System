@@ -82,9 +82,9 @@ export default function ProfessorCourseWorkspacePage({
   ];
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-200">
+    <div className="space-y-6 animate-in fade-in duration-200 print:space-y-0 print:m-0 print:p-0">
       {/* Top Header with Batch & Section Selectors */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-surface-lowest p-6 rounded-2xl border border-border shadow-elevation-1">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-surface-lowest p-6 rounded-2xl border border-border shadow-elevation-1 print:hidden">
         <div className="flex items-start gap-4">
           <Link href="/professor/courses">
             <button className="p-2 rounded-xl border border-border bg-surface hover:bg-surface-container text-on-surface-variant transition-colors mt-1">
@@ -145,7 +145,7 @@ export default function ProfessorCourseWorkspacePage({
       </div>
 
       {/* Top 4 KPI Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 print:hidden">
         <StatCard
           title="Average Attendance"
           value="87.5%"
@@ -176,7 +176,7 @@ export default function ProfessorCourseWorkspacePage({
       </div>
 
       {/* Workspace Navigation Tabs */}
-      <div className="border-b border-border bg-surface-lowest rounded-xl p-1.5 flex items-center gap-1 overflow-x-auto">
+      <div className="border-b border-border bg-surface-lowest rounded-xl p-1.5 flex items-center gap-1 overflow-x-auto print:hidden">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -581,7 +581,7 @@ export default function ProfessorCourseWorkspacePage({
 
       {/* Tab 6: Official A4 Reports & Exports */}
       {activeTab === "reports" && (
-        <div className="space-y-6 animate-in fade-in">
+        <div className="space-y-6 animate-in fade-in print:space-y-0 print:m-0 print:p-0">
           {/* Report Type Selector Pills */}
           <div className="flex flex-wrap items-center gap-2 p-1.5 bg-surface-container rounded-xl border border-border print:hidden">
             <button
@@ -632,12 +632,14 @@ export default function ProfessorCourseWorkspacePage({
       )}
 
       {/* Schedule & Timetable Config Modal */}
-      <ScheduleTimetableModal
-        course={course}
-        isOpen={isTimetableModalOpen}
-        onClose={() => setIsTimetableModalOpen(false)}
-        onSave={updateCourseSchedule}
-      />
+      <div className="print:hidden">
+        <ScheduleTimetableModal
+          course={course}
+          isOpen={isTimetableModalOpen}
+          onClose={() => setIsTimetableModalOpen(false)}
+          onSave={updateCourseSchedule}
+        />
+      </div>
     </div>
   );
 }

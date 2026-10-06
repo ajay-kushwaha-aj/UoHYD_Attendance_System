@@ -183,6 +183,12 @@
     display: block !important;
     page-break-after: avoid !important;
     break-after: avoid !important;
+    min-height: auto !important;
+  }
+
+  /* Automatic print isolation: hide any sibling components when an A4 report sheet is present */
+  body:has(.a4-print-sheet) .space-y-6 > *:not(:has(.a4-print-sheet)):not(.a4-print-sheet) {
+    display: none !important;
   }
 
   /* Tables and Row Break Prevention */

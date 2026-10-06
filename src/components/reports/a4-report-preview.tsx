@@ -113,7 +113,7 @@ export function A4ReportPreview({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 print:space-y-0 print:m-0 print:p-0">
       {/* Top Bar Controls (Hidden in Print) */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-surface-lowest p-4 rounded-xl border border-border print:hidden">
         <div className="flex items-center gap-3">
@@ -165,7 +165,7 @@ export function A4ReportPreview({
       {/* Printable A4 Container */}
       <div
         ref={printRef}
-        className="a4-print-sheet w-full max-w-[210mm] mx-auto bg-white p-6 sm:p-10 shadow-elevation-2 border border-slate-300 print:shadow-none print:border-none print:p-0 print:m-0 print:max-w-none text-slate-900 font-sans"
+        className="a4-print-sheet w-full max-w-[210mm] mx-auto bg-white p-6 sm:p-10 shadow-elevation-2 border border-slate-300 print:shadow-none print:border-none print:p-0 print:m-0 print:max-w-none print:w-full print:min-h-0 text-slate-900 font-sans"
         style={{ minHeight: "297mm" }}
       >
         {/* University Official Academic Header */}

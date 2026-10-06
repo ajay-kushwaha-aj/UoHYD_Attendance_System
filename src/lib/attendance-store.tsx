@@ -153,6 +153,8 @@ interface AttendanceContextType {
   updateGrievanceStatus: (grievanceId: string, status: GrievanceStatus, resolutionNotes?: string) => void;
   // Actions
   enrollStudent: (studentData: Omit<StudentProfile, "id">) => StudentProfile;
+  updateStudent: (id: string, updates: Partial<StudentProfile>) => void;
+  deleteStudent: (id: string) => void;
   addFacultyMember: (facultyData: Omit<ProfessorProfile, "id">) => ProfessorProfile;
   createCourse: (courseData: Omit<Course, "id" | "totalConductedSessions" | "totalStudents">) => Course;
   departments: Department[];
@@ -503,6 +505,58 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
     setAuditLogs((prev) => [audit, ...prev]);
 
     return newStudent;
+  };
+
+  // Action: Update Student Details
+  const updateStudent = (id: string, updates: Partial<StudentProfile>) => {
+    setStudents((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, ...updates } : s))
+    );
+
+    // Audit log
+    const targetStudent = students.find((s) => s.id === id);
+    const updatedName = updates.fullName || targetStudent?.fullName || "Student";
+    const audit: AuditLog = {
+      id: `audit-${Date.now()}`,
+      sessionId: "REGISTRY-UPDATE",
+      courseName: updates.program || targetStudent?.program || "Student Cohort Registry",
+      actorId: currentAdmin.id,
+      actorName: currentAdmin.fullName,
+      actorRole: currentRole,
+      action: "STATUS_OVERRIDE",
+      targetStudentName: updatedName,
+      targetStudentRoll: updates.rollNumber || targetStudent?.rollNumber,
+      oldValue: targetStudent?.fullName || "",
+      newValue: updatedName,
+      reason: `Student profile details updated (Name: ${updatedName})`,
+      timestamp: new Date().toISOString(),
+    };
+    setAuditLogs((prev) => [audit, ...prev]);
+  };
+
+  // Action: Delete / Archive Student
+  const deleteStudent = (id: string) => {
+    const studentToDelete = students.find((s) => s.id === id);
+    setStudents((prev) => prev.filter((s) => s.id !== id));
+
+    if (studentToDelete) {
+      const audit: AuditLog = {
+        id: `audit-${Date.now()}`,
+        sessionId: "REGISTRY-DELETE",
+        courseName: studentToDelete.program,
+        actorId: currentAdmin.id,
+        actorName: currentAdmin.fullName,
+        actorRole: currentRole,
+        action: "STATUS_OVERRIDE",
+        targetStudentName: studentToDelete.fullName,
+        targetStudentRoll: studentToDelete.rollNumber,
+        oldValue: "ACTIVE",
+        newValue: "DELETED",
+        reason: `Student removed from cohort registry`,
+        timestamp: new Date().toISOString(),
+      };
+      setAuditLogs((prev) => [audit, ...prev]);
+    }
   };
 
   // Action: Add Faculty Member
@@ -1552,6 +1606,8 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
         respondToGrievance,
         updateGrievanceStatus,
         enrollStudent,
+        updateStudent,
+        deleteStudent,
         addFacultyMember,
         createCourse,
         departments,

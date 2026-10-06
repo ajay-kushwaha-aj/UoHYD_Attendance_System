@@ -14,20 +14,35 @@ import {
   Phone,
   Building2,
   Save,
+  Pencil,
+  UserCheck,
 } from "lucide-react";
 import { useAttendance } from "@/lib/attendance-store";
+import { StudentProfile } from "@/types";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Modal } from "@/components/ui/modal";
 import { FormField, FormSection } from "@/components/ui/form-field";
 
 export default function AdminStudentsPage() {
-  const { students, enrollStudent, batches } = useAttendance();
+  const { students, enrollStudent, updateStudent, batches } = useAttendance();
   const [search, setSearch] = useState("");
   const [selectedBatchFilter, setSelectedBatchFilter] = useState("ALL");
   const [isEnrollModalOpen, setIsEnrollModalOpen] = useState(false);
   const [successToast, setSuccessToast] = useState("");
+
+  // Edit Modal State
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingStudent, setEditingStudent] = useState<StudentProfile | null>(null);
+  const [editFullName, setEditFullName] = useState("");
+  const [editRollNumber, setEditRollNumber] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [editBatchId, setEditBatchId] = useState("");
+  const [editSemester, setEditSemester] = useState(2);
+  const [editProgram, setEditProgram] = useState("");
 
   // Form State for new student enrollment
   const [fullName, setFullName] = useState("");
@@ -57,6 +72,18 @@ export default function AdminStudentsPage() {
     setIsEnrollModalOpen(true);
   };
 
+  const handleOpenEditModal = (student: StudentProfile) => {
+    setEditingStudent(student);
+    setEditFullName(student.fullName);
+    setEditRollNumber(student.rollNumber);
+    setEditEmail(student.email);
+    setEditPhone(student.phone || "");
+    setEditBatchId(student.batchId);
+    setEditSemester(student.semester);
+    setEditProgram(student.program || "MSc Systems & Computational Biology");
+    setIsEditModalOpen(true);
+  };
+
   const handleEnrollSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!fullName || !rollNumber || !email) return;
@@ -64,14 +91,14 @@ export default function AdminStudentsPage() {
     const chosenBatch = batches.find((b) => b.id === batchId);
 
     const enrolled = enrollStudent({
-      fullName,
-      rollNumber: rollNumber.toUpperCase(),
-      email,
-      phone,
+      fullName: fullName.trim(),
+      rollNumber: rollNumber.trim().toUpperCase(),
+      email: email.trim(),
+      phone: phone.trim(),
       batchId,
       batchName: chosenBatch?.name || "MSc SCB 2025–27",
       semester: Number(semester),
-      program,
+      program: program.trim(),
       department: "Department of Systems & Computational Biology",
       enrollmentNumber: `UOH/SLS/2025/0${String(students.length + 114)}`,
       role: "student",
@@ -79,6 +106,29 @@ export default function AdminStudentsPage() {
 
     setIsEnrollModalOpen(false);
     setSuccessToast(`Student ${enrolled.fullName} (${enrolled.rollNumber}) enrolled successfully!`);
+    setTimeout(() => setSuccessToast(""), 4000);
+  };
+
+  const handleEditSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingStudent || !editFullName.trim() || !editRollNumber.trim() || !editEmail.trim()) return;
+
+    const chosenBatch = batches.find((b) => b.id === editBatchId);
+
+    updateStudent(editingStudent.id, {
+      fullName: editFullName.trim(),
+      rollNumber: editRollNumber.trim().toUpperCase(),
+      email: editEmail.trim(),
+      phone: editPhone.trim(),
+      batchId: editBatchId,
+      batchName: chosenBatch?.name || editingStudent.batchName,
+      semester: Number(editSemester),
+      program: editProgram.trim(),
+    });
+
+    setIsEditModalOpen(false);
+    setSuccessToast(`Student details for "${editFullName.trim()}" (${editRollNumber.trim().toUpperCase()}) updated successfully!`);
+    setEditingStudent(null);
     setTimeout(() => setSuccessToast(""), 4000);
   };
 
@@ -183,38 +233,192 @@ export default function AdminStudentsPage() {
                 <th className="px-6 py-3.5">Institutional Email</th>
                 <th className="px-6 py-3.5">Batch Cohort</th>
                 <th className="px-6 py-3.5 text-center">Semester</th>
-                <th className="px-6 py-3.5 text-right">Status</th>
+                <th className="px-6 py-3.5 text-center">Status</th>
+                <th className="px-6 py-3.5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-surface-container">
-              {filtered.map((s) => (
-                <tr key={s.id} className="hover:bg-surface-low/50 transition-colors h-14">
-                  <td className="px-6 py-3 font-mono font-bold text-primary">
-                    {s.rollNumber}
-                  </td>
-                  <td className="px-6 py-3 font-semibold text-on-surface">
-                    {s.fullName}
-                  </td>
-                  <td className="px-6 py-3 text-on-surface-variant font-mono">
-                    {s.email}
-                  </td>
-                  <td className="px-6 py-3 text-on-surface-variant">
-                    <span className="font-medium text-on-surface">{s.batchName || s.batchId}</span>
-                  </td>
-                  <td className="px-6 py-3 text-center font-mono text-on-surface font-semibold">
-                    Sem {s.semester}
-                  </td>
-                  <td className="px-6 py-3 text-right">
-                    <Badge variant="present" withDot>
-                      Active
-                    </Badge>
+              {filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-10 text-center text-slate-500">
+                    No students match the current search or batch criteria.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                filtered.map((s) => (
+                  <tr key={s.id} className="hover:bg-surface-low/50 transition-colors h-14 group">
+                    <td className="px-6 py-3 font-mono font-bold text-primary">
+                      {s.rollNumber}
+                    </td>
+                    <td className="px-6 py-3">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-on-surface">{s.fullName}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEditModal(s)}
+                          title="Click to edit student name & details"
+                          className="opacity-0 group-hover:opacity-100 p-1 text-on-surface-variant hover:text-primary transition-opacity rounded cursor-pointer"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </td>
+                    <td className="px-6 py-3 text-on-surface-variant font-mono">
+                      {s.email}
+                    </td>
+                    <td className="px-6 py-3 text-on-surface-variant">
+                      <span className="font-medium text-on-surface">{s.batchName || s.batchId}</span>
+                    </td>
+                    <td className="px-6 py-3 text-center font-mono text-on-surface font-semibold">
+                      Sem {s.semester}
+                    </td>
+                    <td className="px-6 py-3 text-center">
+                      <Badge variant="present" withDot>
+                        Active
+                      </Badge>
+                    </td>
+                    <td className="px-6 py-3 text-right">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => handleOpenEditModal(s)}
+                        className="h-8 px-2.5 text-xs font-semibold gap-1.5 text-slate-700 hover:text-primary hover:border-primary/40 cursor-pointer"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                        Edit
+                      </Button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
       </Card>
+
+      {/* Edit Student Details Modal */}
+      <Modal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setEditingStudent(null);
+        }}
+        title={`Edit Student Details: ${editingStudent?.fullName || ""}`}
+        description="Update student name, roll number, institutional email, and academic cohort placement."
+        maxWidth="lg"
+      >
+        <form onSubmit={handleEditSubmit} className="space-y-4 text-xs">
+          <FormSection title="Student Identity & Name">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <FormField label="Full Name (Student Name)" required hint="Official student name on academic record">
+                <Input
+                  type="text"
+                  placeholder="e.g. Ajay Kumar"
+                  value={editFullName}
+                  onChange={(e) => setEditFullName(e.target.value)}
+                  required
+                  autoFocus
+                  className="font-medium text-slate-900"
+                />
+              </FormField>
+
+              <FormField label="Roll Number" required badge="Uppercase">
+                <Input
+                  type="text"
+                  placeholder="e.g. 23MCMS01"
+                  value={editRollNumber}
+                  onChange={(e) => setEditRollNumber(e.target.value)}
+                  required
+                  className="font-mono font-bold uppercase"
+                />
+              </FormField>
+
+              <FormField label="Institutional Email" required>
+                <Input
+                  type="email"
+                  placeholder="e.g. student@uohyd.ac.in"
+                  value={editEmail}
+                  onChange={(e) => setEditEmail(e.target.value)}
+                  required
+                />
+              </FormField>
+
+              <FormField label="Mobile Phone">
+                <Input
+                  type="tel"
+                  placeholder="+91 98765 43210"
+                  value={editPhone}
+                  onChange={(e) => setEditPhone(e.target.value)}
+                />
+              </FormField>
+            </div>
+          </FormSection>
+
+          <FormSection title="Academic Cohort & Degree Placement">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <FormField label="Batch Cohort" required>
+                <select
+                  value={editBatchId}
+                  onChange={(e) => setEditBatchId(e.target.value)}
+                  className="w-full h-10 rounded-xl border border-border bg-surface px-3 text-xs font-semibold text-on-surface shadow-xs hover:border-outline focus:border-primary focus:outline-none focus:ring-3 focus:ring-primary/15 transition-all"
+                >
+                  {batches.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.name}
+                    </option>
+                  ))}
+                </select>
+              </FormField>
+
+              <FormField label="Semester" required>
+                <select
+                  value={editSemester}
+                  onChange={(e) => setEditSemester(Number(e.target.value))}
+                  className="w-full h-10 rounded-xl border border-border bg-surface px-3 text-xs font-semibold text-on-surface shadow-xs hover:border-outline focus:border-primary focus:outline-none focus:ring-3 focus:ring-primary/15 transition-all"
+                >
+                  <option value={1}>Semester 1</option>
+                  <option value={2}>Semester 2</option>
+                  <option value={3}>Semester 3</option>
+                  <option value={4}>Semester 4</option>
+                  <option value={5}>Semester 5</option>
+                  <option value={6}>Semester 6</option>
+                </select>
+              </FormField>
+            </div>
+
+            <FormField label="Degree Program">
+              <Input
+                type="text"
+                value={editProgram}
+                onChange={(e) => setEditProgram(e.target.value)}
+              />
+            </FormField>
+          </FormSection>
+
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-surface-container">
+            <Button
+              type="button"
+              variant="secondary"
+              size="default"
+              onClick={() => {
+                setIsEditModalOpen(false);
+                setEditingStudent(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              size="default"
+              className="bg-primary-container font-bold gap-1.5 shadow-sm text-white"
+            >
+              <Save className="w-4 h-4" /> Save Changes
+            </Button>
+          </div>
+        </form>
+      </Modal>
 
       {/* Enroll Student Modal */}
       {isEnrollModalOpen && (
